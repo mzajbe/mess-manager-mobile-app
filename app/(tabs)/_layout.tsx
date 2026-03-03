@@ -97,5 +97,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 4,
     borderRadius: BorderRadius.full,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
   },
 });

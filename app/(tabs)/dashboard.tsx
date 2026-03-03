@@ -74,7 +74,7 @@ function SimpleBarChart({
 
 export default function DashboardScreen() {
   const { theme } = useTheme();
-  const { monthlyStats, expenses, members, todayMealCount } = useData();
+  const { monthlyStats, expenses, members, todayMealCount, payments, todayMeals } = useData();
 
   const budgetUsed = monthlyStats.myDeposited > 0
     ? monthlyStats.myEstimatedBill / monthlyStats.myDeposited
@@ -91,6 +91,45 @@ export default function DashboardScreen() {
     return {
       label: date.toLocaleDateString('en-US', { weekday: 'short' }).slice(0, 2),
       value: dayExpenses,
+    };
+  });
+
+  // Calculate per-member summary data
+  const totalBazarCost = expenses
+    .filter((e) => e.category === 'bazar')
+    .reduce((sum, e) => sum + e.totalAmount, 0);
+  const totalSharedCost = expenses
+    .filter((e) => e.category !== 'bazar')
+    .reduce((sum, e) => sum + e.totalAmount, 0);
+  const sharedCostPerMember = members.length > 0 ? totalSharedCost / members.length : 0;
+
+  const memberSummaries = members.map((member) => {
+    // Count meals for this member from today's data (demo: estimate for the month)
+    const memberMeal = todayMeals.find((m) => m.userId === member.userId);
+    const dailyMeals = memberMeal
+      ? (memberMeal.breakfast === 'on' ? 1 : 0) +
+        (memberMeal.lunch === 'on' ? 1 : 0) +
+        (memberMeal.dinner === 'on' ? 1 : 0)
+      : 0;
+    const totalMeals = dailyMeals * 28; // Estimated for month
+
+    const mealCost = Math.round(totalMeals * monthlyStats.mealRate);
+    const estimatedBill = mealCost + Math.round(sharedCostPerMember);
+
+    const deposited = payments
+      .filter((p) => p.userId === member.userId)
+      .reduce((sum, p) => sum + p.amount, 0);
+
+    const balance = deposited - estimatedBill;
+
+    return {
+      id: member.id,
+      name: member.user.fullName,
+      initial: member.user.fullName.charAt(0),
+      totalMeals,
+      mealCost,
+      deposit: deposited,
+      balance,
     };
   });
 
@@ -200,6 +239,94 @@ export default function DashboardScreen() {
           </View>
         </View>
 
+        {/* All Member Summary */}
+        <View style={[styles.memberSummaryCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+          <View style={styles.memberSummaryHeader}>
+            <View style={styles.memberSummaryTitleRow}>
+              <Ionicons name="people-circle" size={24} color={theme.primary} />
+              <Text style={[styles.cardTitle, { color: theme.text, marginBottom: 0 }]}>All Member Summary</Text>
+            </View>
+            <Text style={[styles.cardSubtitle, { color: theme.textTertiary }]}>Monthly overview for all members</Text>
+          </View>
+
+          {/* Table Header */}
+          <View style={[styles.summaryTableHeader, { backgroundColor: theme.primary + '10', borderColor: theme.border }]}>
+            <Text style={[styles.summaryHeaderCell, styles.summaryNameCol, { color: theme.textSecondary }]}>Member</Text>
+            <Text style={[styles.summaryHeaderCell, styles.summaryDataCol, { color: theme.textSecondary }]}>Meals</Text>
+            <Text style={[styles.summaryHeaderCell, styles.summaryDataCol, { color: theme.textSecondary }]}>Cost</Text>
+            <Text style={[styles.summaryHeaderCell, styles.summaryDataCol, { color: theme.textSecondary }]}>Deposit</Text>
+            <Text style={[styles.summaryHeaderCell, styles.summaryDataCol, { color: theme.textSecondary }]}>Balance</Text>
+          </View>
+
+          {/* Table Rows */}
+          {memberSummaries.map((member, index) => (
+            <View
+              key={member.id}
+              style={[
+                styles.summaryTableRow,
+                {
+                  backgroundColor: index % 2 === 0 ? 'transparent' : theme.primary + '05',
+                  borderColor: theme.borderLight,
+                },
+              ]}
+            >
+              <View style={[styles.summaryNameCol, styles.summaryNameContent]}>
+                <View style={[styles.summaryAvatar, { backgroundColor: theme.primary + '20' }]}>
+                  <Text style={[styles.summaryAvatarText, { color: theme.primary }]}>{member.initial}</Text>
+                </View>
+                <Text style={[styles.summaryMemberName, { color: theme.text }]} numberOfLines={1}>
+                  {member.name}
+                </Text>
+              </View>
+              <Text style={[styles.summaryDataCol, styles.summaryDataText, { color: theme.text }]}>
+                {member.totalMeals}
+              </Text>
+              <Text style={[styles.summaryDataCol, styles.summaryDataText, { color: theme.text }]}>
+                ৳{member.mealCost.toLocaleString()}
+              </Text>
+              <Text style={[styles.summaryDataCol, styles.summaryDataText, { color: theme.primary }]}>
+                ৳{member.deposit.toLocaleString()}
+              </Text>
+              <Text
+                style={[
+                  styles.summaryDataCol,
+                  styles.summaryBalanceText,
+                  { color: member.balance >= 0 ? theme.success : theme.danger },
+                ]}
+              >
+                {member.balance >= 0 ? '+' : ''}৳{member.balance.toLocaleString()}
+              </Text>
+            </View>
+          ))}
+
+          {/* Total Row */}
+          <View style={[styles.summaryTotalRow, { borderColor: theme.border, backgroundColor: theme.primary + '08' }]}>
+            <Text style={[styles.summaryNameCol, styles.summaryTotalLabel, { color: theme.text }]}>Total</Text>
+            <Text style={[styles.summaryDataCol, styles.summaryTotalValue, { color: theme.text }]}>
+              {memberSummaries.reduce((sum, m) => sum + m.totalMeals, 0)}
+            </Text>
+            <Text style={[styles.summaryDataCol, styles.summaryTotalValue, { color: theme.text }]}>
+              ৳{memberSummaries.reduce((sum, m) => sum + m.mealCost, 0).toLocaleString()}
+            </Text>
+            <Text style={[styles.summaryDataCol, styles.summaryTotalValue, { color: theme.primary }]}>
+              ৳{memberSummaries.reduce((sum, m) => sum + m.deposit, 0).toLocaleString()}
+            </Text>
+            <Text
+              style={[
+                styles.summaryDataCol,
+                styles.summaryTotalValue,
+                {
+                  color: memberSummaries.reduce((sum, m) => sum + m.balance, 0) >= 0
+                    ? theme.success
+                    : theme.danger,
+                },
+              ]}
+            >
+              ৳{memberSummaries.reduce((sum, m) => sum + m.balance, 0).toLocaleString()}
+            </Text>
+          </View>
+        </View>
+
         {/* Member Meal Leaderboard */}
         <View style={[styles.leaderboardCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
           <Text style={[styles.cardTitle, { color: theme.text }]}>🏆 Member Leaderboard</Text>
@@ -281,4 +408,22 @@ const styles = StyleSheet.create({
   leaderboardBarBg: { height: 6, backgroundColor: 'rgba(0,0,0,0.06)', borderRadius: 3, overflow: 'hidden' },
   leaderboardBarFill: { height: '100%', borderRadius: 3 },
   leaderboardCount: { fontSize: 16, fontWeight: '800', width: 40, textAlign: 'right' },
+  // All Member Summary styles
+  memberSummaryCard: { borderRadius: BorderRadius.xl, borderWidth: 1, padding: Spacing.lg, marginBottom: Spacing.lg, ...Shadow.sm },
+  memberSummaryHeader: { marginBottom: Spacing.md },
+  memberSummaryTitleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: 2 },
+  summaryTableHeader: { flexDirection: 'row', alignItems: 'center', paddingVertical: Spacing.sm, paddingHorizontal: Spacing.xs, borderRadius: BorderRadius.sm, marginBottom: 2 },
+  summaryHeaderCell: { fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
+  summaryNameCol: { flex: 2.2 },
+  summaryDataCol: { flex: 1, textAlign: 'right' },
+  summaryTableRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: Spacing.sm, paddingHorizontal: Spacing.xs, borderBottomWidth: StyleSheet.hairlineWidth },
+  summaryNameContent: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
+  summaryAvatar: { width: 26, height: 26, borderRadius: 13, justifyContent: 'center', alignItems: 'center' },
+  summaryAvatarText: { fontSize: 11, fontWeight: '700' },
+  summaryMemberName: { fontSize: 12, fontWeight: '600', flex: 1 },
+  summaryDataText: { fontSize: 12, fontWeight: '600' },
+  summaryBalanceText: { fontSize: 12, fontWeight: '700' },
+  summaryTotalRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: Spacing.sm, paddingHorizontal: Spacing.xs, borderTopWidth: 1.5, marginTop: 2, borderRadius: BorderRadius.sm },
+  summaryTotalLabel: { fontSize: 13, fontWeight: '800' },
+  summaryTotalValue: { fontSize: 12, fontWeight: '800' },
 });
