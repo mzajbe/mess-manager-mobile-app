@@ -171,7 +171,7 @@ function DepositModal({
 // ── Main Home Screen ─────────────────────────────────────────────────
 export default function HomeScreen() {
   const { theme } = useTheme();
-  const { user, mess, isManager } = useAuth();
+  const { user, mess, isManager, hasMess, createMess, joinMess } = useAuth();
   const {
     myTodayMeal, todayMealCount, toggleMeal,
     toggleMemberMeal, getMemberMeal,
@@ -185,11 +185,202 @@ export default function HomeScreen() {
   const [extraMealModal, setExtraMealModal] = useState<{ visible: boolean; userId: string; userName: string }>({ visible: false, userId: '', userName: '' });
   const [extraMealCount, setExtraMealCount] = useState('');
 
+  // Create / Join Mess state
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showJoinModal, setShowJoinModal] = useState(false);
+  const [messName, setMessName] = useState('');
+  const [messAddress, setMessAddress] = useState('');
+  const [inviteCode, setInviteCode] = useState('');
+  const [isCreating, setIsCreating] = useState(false);
+
   // My personal stats
   const myTotalMeals = monthlyStats.myMeals;
   const myDeposited = monthlyStats.myDeposited;
   const myCost = monthlyStats.myEstimatedBill;
   const myBalance = myDeposited - myCost;
+
+  const handleCreateMess = async () => {
+    if (!messName.trim()) {
+      Alert.alert('Error', 'Please enter a mess name');
+      return;
+    }
+    setIsCreating(true);
+    try {
+      await createMess(messName.trim(), messAddress.trim() || undefined);
+      setShowCreateModal(false);
+      setMessName('');
+      setMessAddress('');
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const handleJoinMess = async () => {
+    if (!inviteCode.trim()) {
+      Alert.alert('Error', 'Please enter an invite code');
+      return;
+    }
+    setIsCreating(true);
+    try {
+      await joinMess(inviteCode.trim());
+      setShowJoinModal(false);
+      setInviteCode('');
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  // ── No Mess State ──────────────────────────────────────
+  if (!hasMess) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+        <ScrollView contentContainerStyle={[styles.scrollContent, { justifyContent: 'center', flex: 1 }]}>
+          {/* Header */}
+          <View style={styles.header}>
+            <View style={styles.headerLeft}>
+              <Text style={[styles.greeting, { color: theme.textSecondary }]}>
+                {getGreeting()} 👋
+              </Text>
+              <Text style={[styles.userName, { color: theme.text }]}>
+                {user?.fullName || 'User'}
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={[styles.avatarContainer, { backgroundColor: theme.primary }]}
+              onPress={() => router.push('/more')}
+            >
+              <Text style={styles.avatarText}>{user?.fullName?.charAt(0) || 'U'}</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Welcome Card */}
+          <LinearGradient
+            colors={theme.gradient.hero as unknown as string[]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={[styles.messCard, { alignItems: 'center', paddingVertical: Spacing['3xl'] }]}
+          >
+            <Text style={{ fontSize: 48 }}>🏠</Text>
+            <Text style={[styles.messName, { textAlign: 'center', marginTop: Spacing.md }]}>
+              Welcome to MessManager
+            </Text>
+            <Text style={[styles.messDate, { textAlign: 'center', marginTop: Spacing.xs }]}>
+              Create a mess or join one to get started
+            </Text>
+          </LinearGradient>
+
+          {/* Actions */}
+          <View style={styles.actionsRow}>
+            <TouchableOpacity
+              style={[styles.actionCard, { backgroundColor: theme.surface, borderColor: theme.border }]}
+              activeOpacity={0.7}
+              onPress={() => setShowCreateModal(true)}
+            >
+              <LinearGradient colors={['#22C55E20', '#22C55E08']} style={styles.actionGradient}>
+                <View style={[styles.actionIconCircle, { backgroundColor: '#22C55E20' }]}>
+                  <Ionicons name="add-circle" size={22} color="#22C55E" />
+                </View>
+                <Text style={[styles.actionLabel, { color: theme.text }]}>Create Mess</Text>
+                <Text style={[styles.actionSub, { color: theme.textTertiary }]}>Start as manager</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.actionCard, { backgroundColor: theme.surface, borderColor: theme.border }]}
+              activeOpacity={0.7}
+              onPress={() => setShowJoinModal(true)}
+            >
+              <LinearGradient colors={['#3B82F620', '#3B82F608']} style={styles.actionGradient}>
+                <View style={[styles.actionIconCircle, { backgroundColor: '#3B82F620' }]}>
+                  <Ionicons name="enter" size={22} color="#3B82F6" />
+                </View>
+                <Text style={[styles.actionLabel, { color: theme.text }]}>Join Mess</Text>
+                <Text style={[styles.actionSub, { color: theme.textTertiary }]}>With invite code</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+
+        {/* Create Mess Modal */}
+        <Modal visible={showCreateModal} animationType="slide" transparent>
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalContent, { backgroundColor: theme.surface }]}>
+              <View style={styles.modalHeader}>
+                <Text style={[styles.modalTitle, { color: theme.text }]}>Create a Mess</Text>
+                <TouchableOpacity onPress={() => setShowCreateModal(false)}>
+                  <Ionicons name="close" size={24} color={theme.textSecondary} />
+                </TouchableOpacity>
+              </View>
+
+              <Text style={[styles.modalLabel, { color: theme.textSecondary }]}>MESS NAME</Text>
+              <TextInput
+                style={[styles.modalInput, { backgroundColor: theme.background, borderColor: theme.border, color: theme.text }]}
+                placeholder="e.g. Hall-3 Mess"
+                placeholderTextColor={theme.textTertiary}
+                value={messName}
+                onChangeText={setMessName}
+                autoFocus
+              />
+
+              <Text style={[styles.modalLabel, { color: theme.textSecondary }]}>ADDRESS (OPTIONAL)</Text>
+              <TextInput
+                style={[styles.modalInput, { backgroundColor: theme.background, borderColor: theme.border, color: theme.text }]}
+                placeholder="e.g. Room 205, Hall-3"
+                placeholderTextColor={theme.textTertiary}
+                value={messAddress}
+                onChangeText={setMessAddress}
+              />
+
+              <TouchableOpacity
+                onPress={handleCreateMess}
+                disabled={isCreating}
+                style={[styles.modalSubmitBtn, { backgroundColor: theme.primary, opacity: isCreating ? 0.6 : 1 }]}
+              >
+                <Ionicons name="checkmark-circle" size={20} color="#fff" />
+                <Text style={styles.modalSubmitText}>{isCreating ? 'Creating...' : 'Create Mess'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Join Mess Modal */}
+        <Modal visible={showJoinModal} animationType="slide" transparent>
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalContent, { backgroundColor: theme.surface }]}>
+              <View style={styles.modalHeader}>
+                <Text style={[styles.modalTitle, { color: theme.text }]}>Join a Mess</Text>
+                <TouchableOpacity onPress={() => setShowJoinModal(false)}>
+                  <Ionicons name="close" size={24} color={theme.textSecondary} />
+                </TouchableOpacity>
+              </View>
+
+              <Text style={[styles.modalLabel, { color: theme.textSecondary }]}>INVITE CODE</Text>
+              <TextInput
+                style={[styles.modalInput, { backgroundColor: theme.background, borderColor: theme.border, color: theme.text, textAlign: 'center', letterSpacing: 4, fontSize: 22 }]}
+                placeholder="ABC123"
+                placeholderTextColor={theme.textTertiary}
+                value={inviteCode}
+                onChangeText={setInviteCode}
+                autoCapitalize="characters"
+                autoFocus
+                maxLength={6}
+              />
+
+              <TouchableOpacity
+                onPress={handleJoinMess}
+                disabled={isCreating}
+                style={[styles.modalSubmitBtn, { backgroundColor: '#3B82F6', opacity: isCreating ? 0.6 : 1 }]}
+              >
+                <Ionicons name="enter" size={20} color="#fff" />
+                <Text style={styles.modalSubmitText}>{isCreating ? 'Joining...' : 'Join Mess'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+      </SafeAreaView>
+    );
+  }
+
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>

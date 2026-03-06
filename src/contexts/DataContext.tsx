@@ -48,6 +48,8 @@ interface DataContextType {
   monthlyStats: MonthlyStats;
   // Loading
   isLoading: boolean;
+  // Refresh
+  refreshMembers: () => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | null>(null);
@@ -587,6 +589,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         activities,
         monthlyStats,
         isLoading,
+        refreshMembers: fetchMembers,
       }}
     >
       {children}

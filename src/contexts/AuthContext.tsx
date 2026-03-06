@@ -22,6 +22,8 @@ interface AuthContextType {
   createMess: (name: string, address?: string) => Promise<void>;
   joinMess: (inviteCode: string) => Promise<void>;
   refreshMess: () => Promise<void>;
+  transferManager: (newManagerUserId: string, newManagerName: string) => Promise<void>;
+  removeMember: (targetUserId: string, memberName: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -32,25 +34,63 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [membership, setMembership] = useState<MessMember | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch user profile from our users table
-  const fetchUserProfile = useCallback(async (authUserId: string): Promise<User | null> => {
+  // Fetch user profile from our users table (auto-creates if missing)
+  const fetchUserProfile = useCallback(async (authUserId: string, authEmail?: string, authName?: string, authAvatar?: string): Promise<User | null> => {
     const { data, error } = await supabase
       .from('users')
       .select('*')
       .eq('id', authUserId)
       .single();
 
-    if (error || !data) return null;
+    if (error) {
+      console.log('fetchUserProfile error:', error.message, error.code);
+    }
 
-    return {
-      id: data.id,
-      email: data.email,
-      fullName: data.full_name,
-      phone: data.phone,
-      avatarUrl: data.avatar_url,
-      roomNumber: data.room_number,
-      createdAt: data.created_at,
-    };
+    if (data) {
+      return {
+        id: data.id,
+        email: data.email,
+        fullName: data.full_name,
+        phone: data.phone,
+        avatarUrl: data.avatar_url,
+        roomNumber: data.room_number,
+        createdAt: data.created_at,
+      };
+    }
+
+    // Profile doesn't exist — create it from auth data
+    if (authEmail) {
+      console.log('Creating missing user profile for:', authEmail);
+      const { data: newProfile, error: createError } = await supabase
+        .from('users')
+        .upsert({
+          id: authUserId,
+          email: authEmail,
+          full_name: authName || 'User',
+          avatar_url: authAvatar || null,
+        }, { onConflict: 'id' })
+        .select()
+        .single();
+
+      if (createError) {
+        console.error('Failed to create user profile:', createError.message);
+        return null;
+      }
+
+      if (newProfile) {
+        return {
+          id: newProfile.id,
+          email: newProfile.email,
+          fullName: newProfile.full_name,
+          phone: newProfile.phone,
+          avatarUrl: newProfile.avatar_url,
+          roomNumber: newProfile.room_number,
+          createdAt: newProfile.created_at,
+        };
+      }
+    }
+
+    return null;
   }, []);
 
   // Fetch the user's mess and membership
@@ -106,8 +146,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Check initial session
     supabase.auth.getSession().then(async ({ data: { session } }) => {
+      console.log('Initial session check:', session ? 'Session found' : 'No session');
       if (session?.user) {
-        const profile = await fetchUserProfile(session.user.id);
+        const meta = session.user.user_metadata;
+        const profile = await fetchUserProfile(
+          session.user.id,
+          session.user.email,
+          meta?.full_name || meta?.name,
+          meta?.avatar_url
+        );
+        console.log('Profile loaded:', profile ? profile.fullName : 'null');
         setUser(profile);
         if (profile) {
           await fetchMessData(profile.id);
@@ -119,8 +167,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Subscribe to auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state changed:', event);
         if (event === 'SIGNED_IN' && session?.user) {
-          const profile = await fetchUserProfile(session.user.id);
+          const meta = session.user.user_metadata;
+          const profile = await fetchUserProfile(
+            session.user.id,
+            session.user.email,
+            meta?.full_name || meta?.name,
+            meta?.avatar_url
+          );
+          console.log('Profile after sign in:', profile ? profile.fullName : 'null');
           setUser(profile);
           if (profile) {
             await fetchMessData(profile.id);
@@ -244,20 +300,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const inviteCode = Math.random().toString(36).substring(2, 8).toUpperCase();
 
-      // Create the mess
-      const { data: newMess, error: messError } = await supabase
+      // Create the mess (don't use .select() — RLS SELECT requires membership which doesn't exist yet)
+      const { error: messError } = await supabase
         .from('mess')
         .insert({
           name,
           address,
           invite_code: inviteCode,
           created_by: user.id,
-        })
-        .select()
+        });
+
+      if (messError) {
+        Alert.alert('Error', messError.message);
+        return;
+      }
+
+      // Find the mess we just created by invite code
+      const { data: createdMess, error: findError } = await supabase
+        .from('mess')
+        .select('id')
+        .eq('invite_code', inviteCode)
+        .eq('created_by', user.id)
         .single();
 
-      if (messError || !newMess) {
-        Alert.alert('Error', messError?.message || 'Failed to create mess');
+      if (findError || !createdMess) {
+        Alert.alert('Error', 'Mess created but could not find it. Try joining with code: ' + inviteCode);
         return;
       }
 
@@ -265,7 +332,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { error: memberError } = await supabase
         .from('mess_members')
         .insert({
-          mess_id: newMess.id,
+          mess_id: createdMess.id,
           user_id: user.id,
           role: 'manager',
         });
@@ -277,33 +344,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // Add activity
       await supabase.from('activities').insert({
-        mess_id: newMess.id,
+        mess_id: createdMess.id,
         user_id: user.id,
         type: 'announcement',
         title: 'Mess Created',
         description: `${user.fullName} created the mess "${name}"`,
       });
 
-      // Update local state
-      setMess({
-        id: newMess.id,
-        name: newMess.name,
-        address: newMess.address,
-        inviteCode: newMess.invite_code,
-        createdBy: newMess.created_by,
-        mealSchedule: newMess.meal_schedule || { breakfast: true, lunch: true, dinner: true },
-        cutoffTime: newMess.cutoff_time || '22:00',
-        createdAt: newMess.created_at,
-      });
-      setMembership({
-        id: 'pending', // Will be refreshed
-        messId: newMess.id,
-        userId: user.id,
-        role: 'manager',
-        joinedAt: new Date().toISOString(),
-      });
-
-      // Refresh to get proper membership ID
+      // Refresh state from server (user is now a member, so SELECT policies work)
       await fetchMessData(user.id);
     } catch (err: any) {
       Alert.alert('Error', err.message || 'An unexpected error occurred');
@@ -376,6 +424,87 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [user, fetchMessData]);
 
+  const transferManager = useCallback(async (newManagerUserId: string, newManagerName: string) => {
+    if (!user || !mess) return;
+
+    try {
+      // Demote current manager to member
+      const { error: demoteError } = await supabase
+        .from('mess_members')
+        .update({ role: 'member' })
+        .eq('mess_id', mess.id)
+        .eq('user_id', user.id);
+
+      if (demoteError) {
+        Alert.alert('Error', demoteError.message);
+        return;
+      }
+
+      // Promote target to manager
+      const { error: promoteError } = await supabase
+        .from('mess_members')
+        .update({ role: 'manager' })
+        .eq('mess_id', mess.id)
+        .eq('user_id', newManagerUserId);
+
+      if (promoteError) {
+        // Rollback: re-promote self
+        await supabase
+          .from('mess_members')
+          .update({ role: 'manager' })
+          .eq('mess_id', mess.id)
+          .eq('user_id', user.id);
+        Alert.alert('Error', promoteError.message);
+        return;
+      }
+
+      // Log activity
+      await supabase.from('activities').insert({
+        mess_id: mess.id,
+        user_id: user.id,
+        type: 'announcement',
+        title: 'Manager Changed',
+        description: `${user.fullName} transferred manager role to ${newManagerName}`,
+      });
+
+      // Refresh local state
+      await fetchMessData(user.id);
+      Alert.alert('Success', `${newManagerName} is now the manager!`);
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to transfer manager role');
+    }
+  }, [user, mess, fetchMessData]);
+
+  const removeMember = useCallback(async (targetUserId: string, memberName: string) => {
+    if (!user || !mess) return;
+
+    try {
+      const { error } = await supabase
+        .from('mess_members')
+        .delete()
+        .eq('mess_id', mess.id)
+        .eq('user_id', targetUserId);
+
+      if (error) {
+        Alert.alert('Error', error.message);
+        return;
+      }
+
+      // Log activity
+      await supabase.from('activities').insert({
+        mess_id: mess.id,
+        user_id: user.id,
+        type: 'announcement',
+        title: 'Member Removed',
+        description: `${memberName} was removed from the mess`,
+      });
+
+      Alert.alert('Done', `${memberName} has been removed.`);
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to remove member');
+    }
+  }, [user, mess]);
+
   return (
     <AuthContext.Provider
       value={{
@@ -393,6 +522,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         createMess,
         joinMess,
         refreshMess,
+        transferManager,
+        removeMember,
       }}
     >
       {children}

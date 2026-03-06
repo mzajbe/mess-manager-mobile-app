@@ -51,13 +51,6 @@ function RootLayoutContent() {
       >
         <Stack.Screen name="(tabs)" />
         <Stack.Screen
-          name="modal"
-          options={{
-            presentation: 'modal',
-            animation: 'slide_from_bottom',
-          }}
-        />
-        <Stack.Screen
           name="add-bazar"
           options={{
             presentation: 'modal',

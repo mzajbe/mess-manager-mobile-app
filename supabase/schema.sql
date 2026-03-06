@@ -18,11 +18,12 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO public.users (id, email, full_name, created_at)
+  INSERT INTO public.users (id, email, full_name, avatar_url, created_at)
   VALUES (
     NEW.id,
     NEW.email,
-    COALESCE(NEW.raw_user_meta_data->>'full_name', 'User'),
+    COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name', 'User'),
+    NEW.raw_user_meta_data->>'avatar_url',
     NOW()
   );
   RETURN NEW;
@@ -149,10 +150,20 @@ ALTER TABLE expense_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE activities ENABLE ROW LEVEL SECURITY;
 
+-- Helper function to get current user's mess IDs (bypasses RLS to prevent recursion)
+CREATE OR REPLACE FUNCTION public.get_my_mess_ids()
+RETURNS SETOF UUID AS $$
+  SELECT mess_id FROM mess_members WHERE user_id = auth.uid();
+$$ LANGUAGE sql SECURITY DEFINER STABLE;
+
 -- ── Users Policies ───────────────────────────────────────────
 CREATE POLICY "Users can view own profile"
   ON users FOR SELECT
   USING (auth.uid() = id);
+
+CREATE POLICY "Users can insert own profile"
+  ON users FOR INSERT
+  WITH CHECK (auth.uid() = id);
 
 CREATE POLICY "Users can update own profile"
   ON users FOR UPDATE
@@ -163,9 +174,7 @@ CREATE POLICY "Users can view mess members profiles"
   USING (
     id IN (
       SELECT mm.user_id FROM mess_members mm
-      WHERE mm.mess_id IN (
-        SELECT mess_id FROM mess_members WHERE user_id = auth.uid()
-      )
+      WHERE mm.mess_id IN (SELECT public.get_my_mess_ids())
     )
   );
 
@@ -173,7 +182,7 @@ CREATE POLICY "Users can view mess members profiles"
 CREATE POLICY "Members can view their mess"
   ON mess FOR SELECT
   USING (
-    id IN (SELECT mess_id FROM mess_members WHERE user_id = auth.uid())
+    id IN (SELECT public.get_my_mess_ids())
   );
 
 CREATE POLICY "Anyone can create a mess"
@@ -193,7 +202,7 @@ CREATE POLICY "Manager can update mess"
 CREATE POLICY "Members can view mess members"
   ON mess_members FOR SELECT
   USING (
-    mess_id IN (SELECT mess_id FROM mess_members WHERE user_id = auth.uid())
+    mess_id IN (SELECT public.get_my_mess_ids())
   );
 
 CREATE POLICY "Users can join a mess"
@@ -203,9 +212,27 @@ CREATE POLICY "Users can join a mess"
 CREATE POLICY "Manager can remove members"
   ON mess_members FOR DELETE
   USING (
-    mess_id IN (
-      SELECT mess_id FROM mess_members
-      WHERE user_id = auth.uid() AND role = 'manager'
+    mess_id IN (SELECT public.get_my_mess_ids())
+    AND EXISTS (
+      SELECT 1 FROM mess_members
+      WHERE mess_id = mess_members.mess_id
+        AND user_id = auth.uid()
+        AND role = 'manager'
+    )
+  );
+
+CREATE POLICY "Manager can update member roles"
+  ON mess_members FOR UPDATE
+  USING (
+    user_id = auth.uid()
+    OR (
+      mess_id IN (SELECT public.get_my_mess_ids())
+      AND EXISTS (
+        SELECT 1 FROM mess_members
+        WHERE mess_id = mess_members.mess_id
+          AND user_id = auth.uid()
+          AND role = 'manager'
+      )
     )
   );
 

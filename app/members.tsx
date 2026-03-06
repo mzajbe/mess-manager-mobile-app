@@ -2,7 +2,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import {
+    ActionSheetIOS,
     Alert,
+    Platform,
     ScrollView,
     Share,
     StyleSheet,
@@ -18,8 +20,8 @@ import { BorderRadius, Shadow, Spacing } from '../src/theme';
 
 export default function MembersScreen() {
   const { theme } = useTheme();
-  const { isManager, mess } = useAuth();
-  const { members } = useData();
+  const { isManager, mess, user, transferManager, removeMember } = useAuth();
+  const { members, refreshMembers } = useData();
   const router = useRouter();
 
   const handleShareInvite = async () => {
@@ -30,11 +32,79 @@ export default function MembersScreen() {
     }
   };
 
-  const handleRemoveMember = (name: string) => {
-    Alert.alert('Remove Member', `Are you sure you want to remove ${name}?`, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Remove', style: 'destructive', onPress: () => {} },
-    ]);
+  const showMemberActions = (memberId: string, memberUserId: string, memberName: string) => {
+    const options = ['Make Manager', 'Remove Member', 'Cancel'];
+    const destructiveIndex = 1;
+    const cancelIndex = 2;
+
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options,
+          destructiveButtonIndex: destructiveIndex,
+          cancelButtonIndex: cancelIndex,
+          title: memberName,
+          message: 'Choose an action',
+        },
+        (buttonIndex) => {
+          if (buttonIndex === 0) handleMakeManager(memberUserId, memberName);
+          if (buttonIndex === 1) handleRemoveMember(memberUserId, memberName);
+        },
+      );
+    } else {
+      // Android: use Alert with buttons
+      Alert.alert(
+        memberName,
+        'Choose an action',
+        [
+          {
+            text: '👑 Make Manager',
+            onPress: () => handleMakeManager(memberUserId, memberName),
+          },
+          {
+            text: '🗑️ Remove Member',
+            style: 'destructive',
+            onPress: () => handleRemoveMember(memberUserId, memberName),
+          },
+          { text: 'Cancel', style: 'cancel' },
+        ],
+      );
+    }
+  };
+
+  const handleMakeManager = (memberUserId: string, memberName: string) => {
+    Alert.alert(
+      'Transfer Manager Role',
+      `Are you sure you want to make ${memberName} the manager?\n\nYou will become a regular member.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Yes, Transfer',
+          onPress: async () => {
+            await transferManager(memberUserId, memberName);
+            await refreshMembers();
+          },
+        },
+      ],
+    );
+  };
+
+  const handleRemoveMember = (memberUserId: string, memberName: string) => {
+    Alert.alert(
+      'Remove Member',
+      `Are you sure you want to remove ${memberName} from the mess?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            await removeMember(memberUserId, memberName);
+            await refreshMembers();
+          },
+        },
+      ],
+    );
   };
 
   return (
@@ -76,7 +146,7 @@ export default function MembersScreen() {
             key={member.id}
             style={[styles.memberCard, { backgroundColor: theme.surface, borderColor: theme.border }]}
           >
-            <View style={[styles.memberAvatar, { backgroundColor: theme.primary }]}>
+            <View style={[styles.memberAvatar, { backgroundColor: member.role === 'manager' ? theme.secondary : theme.primary }]}>
               <Text style={styles.memberAvatarText}>{member.user.fullName.charAt(0)}</Text>
             </View>
             <View style={styles.memberInfo}>
@@ -87,9 +157,14 @@ export default function MembersScreen() {
                     <Text style={[styles.managerText, { color: theme.secondary }]}>👑 Manager</Text>
                   </View>
                 )}
+                {member.userId === user?.id && member.role !== 'manager' && (
+                  <View style={[styles.managerBadge, { backgroundColor: theme.primary + '15' }]}>
+                    <Text style={[styles.managerText, { color: theme.primary }]}>You</Text>
+                  </View>
+                )}
               </View>
               <Text style={[styles.memberDetails, { color: theme.textTertiary }]}>
-                {member.user.phone} · Room {member.user.roomNumber}
+                {member.user.email}
               </Text>
               <Text style={[styles.memberJoined, { color: theme.textTertiary }]}>
                 Joined {new Date(member.joinedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
@@ -97,7 +172,7 @@ export default function MembersScreen() {
             </View>
             {isManager && member.role !== 'manager' && (
               <TouchableOpacity
-                onPress={() => handleRemoveMember(member.user.fullName)}
+                onPress={() => showMemberActions(member.id, member.userId, member.user.fullName)}
                 style={styles.removeBtn}
               >
                 <Ionicons name="ellipsis-vertical" size={18} color={theme.textTertiary} />
@@ -151,7 +226,7 @@ const styles = StyleSheet.create({
   memberAvatar: { width: 48, height: 48, borderRadius: 24, justifyContent: 'center', alignItems: 'center' },
   memberAvatarText: { color: '#fff', fontSize: 18, fontWeight: '700' },
   memberInfo: { flex: 1 },
-  memberNameRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  memberNameRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, flexWrap: 'wrap' },
   memberName: { fontSize: 15, fontWeight: '600' },
   managerBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: BorderRadius.full },
   managerText: { fontSize: 10, fontWeight: '600' },
