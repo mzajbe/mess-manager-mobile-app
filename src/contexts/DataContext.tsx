@@ -1,4 +1,6 @@
-import React, { createContext, useCallback, useContext, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { Alert } from 'react-native';
+import { supabase } from '../lib/supabase';
 import {
     Activity,
     Expense,
@@ -10,110 +12,12 @@ import {
     MonthlyBill,
     MonthlyStats,
     Payment,
-    User
+    User,
 } from '../types';
-
-// Demo members
-const DEMO_MEMBERS: (MessMember & { user: User })[] = [
-  {
-    id: 'dm-1',
-    messId: 'demo-mess-1',
-    userId: 'demo-user-1',
-    role: 'manager',
-    joinedAt: '2026-01-01',
-    user: { id: 'demo-user-1', email: 'zajbe@test.com', fullName: 'Zajbe', phone: '+8801712345678', roomNumber: 'A-101', createdAt: '2026-01-01' },
-  },
-  {
-    id: 'dm-2',
-    messId: 'demo-mess-1',
-    userId: 'demo-user-2',
-    role: 'member',
-    joinedAt: '2026-01-05',
-    user: { id: 'demo-user-2', email: 'rahim@test.com', fullName: 'Rahim Uddin', phone: '+8801812345678', roomNumber: 'A-102', createdAt: '2026-01-05' },
-  },
-  {
-    id: 'dm-3',
-    messId: 'demo-mess-1',
-    userId: 'demo-user-3',
-    role: 'member',
-    joinedAt: '2026-01-10',
-    user: { id: 'demo-user-3', email: 'karim@test.com', fullName: 'Karim Ahmed', phone: '+8801912345678', roomNumber: 'B-201', createdAt: '2026-01-10' },
-  },
-  {
-    id: 'dm-4',
-    messId: 'demo-mess-1',
-    userId: 'demo-user-4',
-    role: 'member',
-    joinedAt: '2026-01-15',
-    user: { id: 'demo-user-4', email: 'fahim@test.com', fullName: 'Fahim Hassan', phone: '+8801612345678', roomNumber: 'B-202', createdAt: '2026-01-15' },
-  },
-  {
-    id: 'dm-5',
-    messId: 'demo-mess-1',
-    userId: 'demo-user-5',
-    role: 'member',
-    joinedAt: '2026-02-01',
-    user: { id: 'demo-user-5', email: 'tanvir@test.com', fullName: 'Tanvir Islam', phone: '+8801512345678', roomNumber: 'C-301', createdAt: '2026-02-01' },
-  },
-];
+import { useAuth } from './AuthContext';
 
 const today = new Date().toISOString().split('T')[0];
-
-const DEMO_MEALS: Meal[] = [
-  { id: 'm-1', userId: 'demo-user-1', messId: 'demo-mess-1', date: today, breakfast: 'on', lunch: 'on', dinner: 'on', guestBreakfast: 0, guestLunch: 0, guestDinner: 0 },
-  { id: 'm-2', userId: 'demo-user-2', messId: 'demo-mess-1', date: today, breakfast: 'on', lunch: 'on', dinner: 'off', guestBreakfast: 0, guestLunch: 1, guestDinner: 0 },
-  { id: 'm-3', userId: 'demo-user-3', messId: 'demo-mess-1', date: today, breakfast: 'off', lunch: 'on', dinner: 'on', guestBreakfast: 0, guestLunch: 0, guestDinner: 0 },
-  { id: 'm-4', userId: 'demo-user-4', messId: 'demo-mess-1', date: today, breakfast: 'on', lunch: 'off', dinner: 'on', guestBreakfast: 0, guestLunch: 0, guestDinner: 0 },
-  { id: 'm-5', userId: 'demo-user-5', messId: 'demo-mess-1', date: today, breakfast: 'on', lunch: 'on', dinner: 'on', guestBreakfast: 0, guestLunch: 0, guestDinner: 1 },
-];
-
-const DEMO_EXPENSES: Expense[] = [
-  {
-    id: 'e-1', messId: 'demo-mess-1', addedBy: 'demo-user-2', category: 'bazar', totalAmount: 1250,
-    description: 'Daily bazar - rice, fish, vegetables', date: today, createdAt: new Date().toISOString(),
-    addedByUser: DEMO_MEMBERS[1].user,
-    items: [
-      { id: 'ei-1', expenseId: 'e-1', name: 'Rice', quantity: 5, unit: 'kg', price: 350 },
-      { id: 'ei-2', expenseId: 'e-1', name: 'Rui Fish', quantity: 1.5, unit: 'kg', price: 450 },
-      { id: 'ei-3', expenseId: 'e-1', name: 'Vegetables', quantity: 1, unit: 'lot', price: 250 },
-      { id: 'ei-4', expenseId: 'e-1', name: 'Oil & Spices', quantity: 1, unit: 'lot', price: 200 },
-    ],
-  },
-  {
-    id: 'e-2', messId: 'demo-mess-1', addedBy: 'demo-user-3', category: 'bazar', totalAmount: 980,
-    description: 'Evening bazar - chicken, potatoes', date: '2026-03-02', createdAt: '2026-03-02T16:30:00Z',
-    addedByUser: DEMO_MEMBERS[2].user,
-    items: [
-      { id: 'ei-5', expenseId: 'e-2', name: 'Chicken', quantity: 2, unit: 'kg', price: 600 },
-      { id: 'ei-6', expenseId: 'e-2', name: 'Potatoes', quantity: 3, unit: 'kg', price: 180 },
-      { id: 'ei-7', expenseId: 'e-2', name: 'Onion & Garlic', quantity: 1, unit: 'kg', price: 200 },
-    ],
-  },
-  {
-    id: 'e-3', messId: 'demo-mess-1', addedBy: 'demo-user-1', category: 'gas', totalAmount: 1200,
-    description: 'Monthly gas bill', date: '2026-03-01', createdAt: '2026-03-01T10:00:00Z',
-    addedByUser: DEMO_MEMBERS[0].user,
-  },
-  {
-    id: 'e-4', messId: 'demo-mess-1', addedBy: 'demo-user-1', category: 'utility', totalAmount: 2500,
-    description: 'Electricity + Water bill', date: '2026-03-01', createdAt: '2026-03-01T10:30:00Z',
-    addedByUser: DEMO_MEMBERS[0].user,
-  },
-];
-
-const DEMO_PAYMENTS: Payment[] = [
-  { id: 'p-1', messId: 'demo-mess-1', userId: 'demo-user-1', amount: 5000, month: '2026-03', createdAt: '2026-03-01T12:00:00Z', user: DEMO_MEMBERS[0].user },
-  { id: 'p-2', messId: 'demo-mess-1', userId: 'demo-user-2', amount: 5000, month: '2026-03', createdAt: '2026-03-01T14:00:00Z', user: DEMO_MEMBERS[1].user },
-  { id: 'p-3', messId: 'demo-mess-1', userId: 'demo-user-3', amount: 3000, month: '2026-03', createdAt: '2026-03-02T10:00:00Z', user: DEMO_MEMBERS[2].user },
-];
-
-const DEMO_ACTIVITIES: Activity[] = [
-  { id: 'a-1', messId: 'demo-mess-1', userId: 'demo-user-2', type: 'bazar_added', title: 'Bazar added', description: 'Rahim added bazar: ৳1,250', createdAt: new Date().toISOString(), user: DEMO_MEMBERS[1].user },
-  { id: 'a-2', messId: 'demo-mess-1', userId: 'demo-user-3', type: 'payment_made', title: 'Payment received', description: 'Karim deposited ৳3,000', createdAt: '2026-03-02T10:00:00Z', user: DEMO_MEMBERS[2].user },
-  { id: 'a-3', messId: 'demo-mess-1', userId: 'demo-user-3', type: 'bazar_added', title: 'Bazar added', description: 'Karim added bazar: ৳980', createdAt: '2026-03-02T16:30:00Z', user: DEMO_MEMBERS[2].user },
-  { id: 'a-4', messId: 'demo-mess-1', userId: 'demo-user-5', type: 'member_joined', title: 'New member', description: 'Tanvir Islam joined the mess', createdAt: '2026-02-01T12:00:00Z', user: DEMO_MEMBERS[4].user },
-  { id: 'a-5', messId: 'demo-mess-1', userId: 'demo-user-1', type: 'announcement', title: 'Announcement', description: 'Please deposit this month\'s advance by March 5th', createdAt: '2026-03-01T08:00:00Z', user: DEMO_MEMBERS[0].user },
-];
+const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
 
 interface DataContextType {
   // Members
@@ -149,110 +53,489 @@ interface DataContextType {
 const DataContext = createContext<DataContextType | null>(null);
 
 export function DataProvider({ children }: { children: React.ReactNode }) {
-  const [meals, setMeals] = useState<Meal[]>(DEMO_MEALS);
-  const [expenses, setExpenses] = useState<Expense[]>(DEMO_EXPENSES);
-  const [payments, setPayments] = useState<Payment[]>(DEMO_PAYMENTS);
-  const [activities, setActivities] = useState<Activity[]>(DEMO_ACTIVITIES);
+  const { user, mess } = useAuth();
+  const messId = mess?.id;
+  const userId = user?.id;
+
+  const [members, setMembers] = useState<(MessMember & { user: User })[]>([]);
+  const [meals, setMeals] = useState<Meal[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [activities, setActivities] = useState<Activity[]>([]);
   const [extraMealsMap, setExtraMealsMap] = useState<Record<string, number>>({});
-  const [isLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const addExtraMeals = useCallback((userId: string, count: number) => {
-    setExtraMealsMap((prev) => ({
-      ...prev,
-      [userId]: (prev[userId] || 0) + count,
+  // ── Fetch Members ──────────────────────────────────────────
+  const fetchMembers = useCallback(async () => {
+    if (!messId) return;
+    const { data, error } = await supabase
+      .from('mess_members')
+      .select('*, user:users(*)')
+      .eq('mess_id', messId);
+
+    if (error) {
+      console.error('Error fetching members:', error.message);
+      return;
+    }
+
+    const mapped = (data || []).map((m: any) => ({
+      id: m.id,
+      messId: m.mess_id,
+      userId: m.user_id,
+      role: m.role,
+      joinedAt: m.joined_at,
+      user: {
+        id: m.user.id,
+        email: m.user.email,
+        fullName: m.user.full_name,
+        phone: m.user.phone,
+        avatarUrl: m.user.avatar_url,
+        roomNumber: m.user.room_number,
+        createdAt: m.user.created_at,
+      },
     }));
-  }, []);
+    setMembers(mapped);
+  }, [messId]);
 
-  const getExtraMeals = useCallback((userId: string): number => {
-    return extraMealsMap[userId] || 0;
-  }, [extraMealsMap]);
+  // ── Fetch Today's Meals ────────────────────────────────────
+  const fetchMeals = useCallback(async () => {
+    if (!messId) return;
+    const { data, error } = await supabase
+      .from('meals')
+      .select('*')
+      .eq('mess_id', messId)
+      .eq('date', today);
 
-  const myTodayMeal = meals.find((m) => m.userId === 'demo-user-1' && m.date === today) || null;
+    if (error) {
+      console.error('Error fetching meals:', error.message);
+      return;
+    }
 
+    const mapped = (data || []).map((m: any) => ({
+      id: m.id,
+      userId: m.user_id,
+      messId: m.mess_id,
+      date: m.date,
+      breakfast: m.breakfast,
+      lunch: m.lunch,
+      dinner: m.dinner,
+      guestBreakfast: m.guest_breakfast,
+      guestLunch: m.guest_lunch,
+      guestDinner: m.guest_dinner,
+    }));
+    setMeals(mapped);
+  }, [messId]);
+
+  // ── Fetch Expenses ─────────────────────────────────────────
+  const fetchExpenses = useCallback(async () => {
+    if (!messId) return;
+    const { data, error } = await supabase
+      .from('expenses')
+      .select('*, items:expense_items(*), addedByUser:users!added_by(*)')
+      .eq('mess_id', messId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching expenses:', error.message);
+      return;
+    }
+
+    const mapped = (data || []).map((e: any) => ({
+      id: e.id,
+      messId: e.mess_id,
+      addedBy: e.added_by,
+      category: e.category,
+      totalAmount: Number(e.total_amount),
+      description: e.description,
+      receiptUrl: e.receipt_url,
+      date: e.date,
+      createdAt: e.created_at,
+      items: (e.items || []).map((item: any) => ({
+        id: item.id,
+        expenseId: item.expense_id,
+        name: item.name,
+        quantity: item.quantity ? Number(item.quantity) : undefined,
+        unit: item.unit,
+        price: Number(item.price),
+      })),
+      addedByUser: e.addedByUser ? {
+        id: e.addedByUser.id,
+        email: e.addedByUser.email,
+        fullName: e.addedByUser.full_name,
+        phone: e.addedByUser.phone,
+        avatarUrl: e.addedByUser.avatar_url,
+        roomNumber: e.addedByUser.room_number,
+        createdAt: e.addedByUser.created_at,
+      } : undefined,
+    }));
+    setExpenses(mapped);
+  }, [messId]);
+
+  // ── Fetch Payments ─────────────────────────────────────────
+  const fetchPayments = useCallback(async () => {
+    if (!messId) return;
+    const { data, error } = await supabase
+      .from('payments')
+      .select('*, user:users!user_id(*)')
+      .eq('mess_id', messId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching payments:', error.message);
+      return;
+    }
+
+    const mapped = (data || []).map((p: any) => ({
+      id: p.id,
+      messId: p.mess_id,
+      userId: p.user_id,
+      amount: Number(p.amount),
+      month: p.month,
+      note: p.note,
+      verifiedBy: p.verified_by,
+      createdAt: p.created_at,
+      user: p.user ? {
+        id: p.user.id,
+        email: p.user.email,
+        fullName: p.user.full_name,
+        phone: p.user.phone,
+        avatarUrl: p.user.avatar_url,
+        roomNumber: p.user.room_number,
+        createdAt: p.user.created_at,
+      } : undefined,
+    }));
+    setPayments(mapped);
+  }, [messId]);
+
+  // ── Fetch Activities ───────────────────────────────────────
+  const fetchActivities = useCallback(async () => {
+    if (!messId) return;
+    const { data, error } = await supabase
+      .from('activities')
+      .select('*, user:users!user_id(*)')
+      .eq('mess_id', messId)
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    if (error) {
+      console.error('Error fetching activities:', error.message);
+      return;
+    }
+
+    const mapped = (data || []).map((a: any) => ({
+      id: a.id,
+      messId: a.mess_id,
+      userId: a.user_id,
+      type: a.type,
+      title: a.title,
+      description: a.description,
+      metadata: a.metadata,
+      createdAt: a.created_at,
+      user: a.user ? {
+        id: a.user.id,
+        email: a.user.email,
+        fullName: a.user.full_name,
+        phone: a.user.phone,
+        avatarUrl: a.user.avatar_url,
+        roomNumber: a.user.room_number,
+        createdAt: a.user.created_at,
+      } : undefined,
+    }));
+    setActivities(mapped);
+  }, [messId]);
+
+  // ── Load all data when mess changes ────────────────────────
+  useEffect(() => {
+    if (!messId) {
+      setMembers([]);
+      setMeals([]);
+      setExpenses([]);
+      setPayments([]);
+      setActivities([]);
+      return;
+    }
+
+    setIsLoading(true);
+    Promise.all([
+      fetchMembers(),
+      fetchMeals(),
+      fetchExpenses(),
+      fetchPayments(),
+      fetchActivities(),
+    ]).finally(() => setIsLoading(false));
+  }, [messId, fetchMembers, fetchMeals, fetchExpenses, fetchPayments, fetchActivities]);
+
+  // ── Derived data ───────────────────────────────────────────
   const todayMeals = meals.filter((m) => m.date === today);
+  const myTodayMeal = todayMeals.find((m) => m.userId === userId) || null;
 
   const todayMealCount: MealCount = {
-    breakfast: todayMeals.filter((m) => m.breakfast === 'on').length + todayMeals.reduce((sum, m) => sum + m.guestBreakfast, 0),
-    lunch: todayMeals.filter((m) => m.lunch === 'on').length + todayMeals.reduce((sum, m) => sum + m.guestLunch, 0),
-    dinner: todayMeals.filter((m) => m.dinner === 'on').length + todayMeals.reduce((sum, m) => sum + m.guestDinner, 0),
+    breakfast: todayMeals.filter((m) => m.breakfast === 'on').length +
+      todayMeals.reduce((sum, m) => sum + m.guestBreakfast, 0),
+    lunch: todayMeals.filter((m) => m.lunch === 'on').length +
+      todayMeals.reduce((sum, m) => sum + m.guestLunch, 0),
+    dinner: todayMeals.filter((m) => m.dinner === 'on').length +
+      todayMeals.reduce((sum, m) => sum + m.guestDinner, 0),
     total: 0,
   };
   todayMealCount.total = todayMealCount.breakfast + todayMealCount.lunch + todayMealCount.dinner;
 
-  const toggleMeal = useCallback((mealType: MealType) => {
-    setMeals((prev) =>
-      prev.map((meal) => {
-        if (meal.userId === 'demo-user-1' && meal.date === today) {
-          return { ...meal, [mealType]: meal[mealType] === 'on' ? 'off' : 'on' };
-        }
-        return meal;
-      })
-    );
-  }, []);
+  // ── Toggle own meal ────────────────────────────────────────
+  const toggleMeal = useCallback(async (mealType: MealType) => {
+    if (!userId || !messId) return;
 
-  const toggleMemberMeal = useCallback((userId: string, mealType: MealType) => {
-    setMeals((prev) =>
-      prev.map((meal) => {
-        if (meal.userId === userId && meal.date === today) {
-          return { ...meal, [mealType]: meal[mealType] === 'on' ? 'off' : 'on' };
-        }
-        return meal;
-      })
-    );
-  }, []);
+    const existing = meals.find((m) => m.userId === userId && m.date === today);
+    const newValue = existing?.[mealType] === 'on' ? 'off' : 'on';
 
-  const getMemberMeal = useCallback((userId: string): Meal | null => {
-    return meals.find((m) => m.userId === userId && m.date === today) || null;
+    // Optimistic update
+    if (existing) {
+      setMeals((prev) =>
+        prev.map((m) =>
+          m.userId === userId && m.date === today
+            ? { ...m, [mealType]: newValue }
+            : m
+        )
+      );
+    } else {
+      const newMeal: Meal = {
+        id: 'temp-' + Date.now(),
+        userId,
+        messId,
+        date: today,
+        breakfast: 'off',
+        lunch: 'off',
+        dinner: 'off',
+        guestBreakfast: 0,
+        guestLunch: 0,
+        guestDinner: 0,
+        [mealType]: newValue,
+      };
+      setMeals((prev) => [...prev, newMeal]);
+    }
+
+    // Upsert to Supabase
+    const { error } = await supabase
+      .from('meals')
+      .upsert(
+        {
+          user_id: userId,
+          mess_id: messId,
+          date: today,
+          [mealType]: newValue,
+        },
+        { onConflict: 'user_id,mess_id,date' }
+      );
+
+    if (error) {
+      console.error('Error toggling meal:', error.message);
+      await fetchMeals(); // Revert to server state
+    }
+  }, [userId, messId, meals, fetchMeals]);
+
+  // ── Toggle member meal (manager) ───────────────────────────
+  const toggleMemberMeal = useCallback(async (targetUserId: string, mealType: MealType) => {
+    if (!messId) return;
+
+    const existing = meals.find((m) => m.userId === targetUserId && m.date === today);
+    const newValue = existing?.[mealType] === 'on' ? 'off' : 'on';
+
+    // Optimistic update
+    if (existing) {
+      setMeals((prev) =>
+        prev.map((m) =>
+          m.userId === targetUserId && m.date === today
+            ? { ...m, [mealType]: newValue }
+            : m
+        )
+      );
+    } else {
+      const newMeal: Meal = {
+        id: 'temp-' + Date.now(),
+        userId: targetUserId,
+        messId,
+        date: today,
+        breakfast: 'off',
+        lunch: 'off',
+        dinner: 'off',
+        guestBreakfast: 0,
+        guestLunch: 0,
+        guestDinner: 0,
+        [mealType]: newValue,
+      };
+      setMeals((prev) => [...prev, newMeal]);
+    }
+
+    const { error } = await supabase
+      .from('meals')
+      .upsert(
+        {
+          user_id: targetUserId,
+          mess_id: messId,
+          date: today,
+          [mealType]: newValue,
+        },
+        { onConflict: 'user_id,mess_id,date' }
+      );
+
+    if (error) {
+      console.error('Error toggling member meal:', error.message);
+      await fetchMeals();
+    }
+  }, [messId, meals, fetchMeals]);
+
+  // ── Update guest meal count ────────────────────────────────
+  const updateGuestMeal = useCallback(async (mealType: MealType, count: number) => {
+    if (!userId || !messId) return;
+
+    const guestKey = `guest_${mealType}`;
+    const localGuestKey = `guest${mealType.charAt(0).toUpperCase() + mealType.slice(1)}` as keyof Meal;
+
+    // Optimistic update
+    setMeals((prev) =>
+      prev.map((m) =>
+        m.userId === userId && m.date === today
+          ? { ...m, [localGuestKey]: Math.max(0, count) }
+          : m
+      )
+    );
+
+    const { error } = await supabase
+      .from('meals')
+      .upsert(
+        {
+          user_id: userId,
+          mess_id: messId,
+          date: today,
+          [guestKey]: Math.max(0, count),
+        },
+        { onConflict: 'user_id,mess_id,date' }
+      );
+
+    if (error) {
+      console.error('Error updating guest meal:', error.message);
+      await fetchMeals();
+    }
+  }, [userId, messId, fetchMeals]);
+
+  const getMemberMeal = useCallback((targetUserId: string): Meal | null => {
+    return meals.find((m) => m.userId === targetUserId && m.date === today) || null;
   }, [meals]);
 
-  const updateGuestMeal = useCallback((mealType: MealType, count: number) => {
-    const guestKey = `guest${mealType.charAt(0).toUpperCase() + mealType.slice(1)}` as keyof Meal;
-    setMeals((prev) =>
-      prev.map((meal) => {
-        if (meal.userId === 'demo-user-1' && meal.date === today) {
-          return { ...meal, [guestKey]: Math.max(0, count) };
+  // ── Extra meals (local tracking) ───────────────────────────
+  const addExtraMeals = useCallback((targetUserId: string, count: number) => {
+    setExtraMealsMap((prev) => ({
+      ...prev,
+      [targetUserId]: (prev[targetUserId] || 0) + count,
+    }));
+  }, []);
+
+  const getExtraMeals = useCallback((targetUserId: string): number => {
+    return extraMealsMap[targetUserId] || 0;
+  }, [extraMealsMap]);
+
+  // ── Add expense ────────────────────────────────────────────
+  const addExpense = useCallback(async (
+    expense: Omit<Expense, 'id' | 'createdAt'>,
+    items?: Omit<ExpenseItem, 'id' | 'expenseId'>[]
+  ) => {
+    if (!messId || !userId) return;
+
+    try {
+      const { data: newExpense, error: expenseError } = await supabase
+        .from('expenses')
+        .insert({
+          mess_id: expense.messId || messId,
+          added_by: expense.addedBy || userId,
+          category: expense.category,
+          total_amount: expense.totalAmount,
+          description: expense.description,
+          date: expense.date,
+        })
+        .select()
+        .single();
+
+      if (expenseError || !newExpense) {
+        Alert.alert('Error', expenseError?.message || 'Failed to add expense');
+        return;
+      }
+
+      // Add expense items
+      if (items && items.length > 0) {
+        const { error: itemsError } = await supabase
+          .from('expense_items')
+          .insert(
+            items.map((item) => ({
+              expense_id: newExpense.id,
+              name: item.name,
+              quantity: item.quantity,
+              unit: item.unit,
+              price: item.price,
+            }))
+          );
+
+        if (itemsError) {
+          console.error('Error adding expense items:', itemsError.message);
         }
-        return meal;
-      })
-    );
-  }, []);
+      }
 
-  const addExpense = useCallback((expense: Omit<Expense, 'id' | 'createdAt'>, items?: Omit<ExpenseItem, 'id' | 'expenseId'>[]) => {
-    const newId = `e-${Date.now()}`;
-    const newExpense: Expense = {
-      ...expense,
-      id: newId,
-      createdAt: new Date().toISOString(),
-      items: items?.map((item, i) => ({ ...item, id: `ei-${Date.now()}-${i}`, expenseId: newId })),
-    };
-    setExpenses((prev) => [newExpense, ...prev]);
-    setActivities((prev) => [{
-      id: `a-${Date.now()}`,
-      messId: expense.messId,
-      userId: expense.addedBy,
-      type: 'bazar_added',
-      title: 'Bazar added',
-      description: `New ${expense.category}: ৳${expense.totalAmount.toLocaleString()}`,
-      createdAt: new Date().toISOString(),
-      user: expense.addedByUser,
-    }, ...prev]);
-  }, []);
+      // Add activity
+      await supabase.from('activities').insert({
+        mess_id: messId,
+        user_id: userId,
+        type: 'bazar_added',
+        title: 'Expense added',
+        description: `New ${expense.category}: ৳${expense.totalAmount.toLocaleString()}`,
+      });
 
-  const addPayment = useCallback((amount: number, userId: string, month: string) => {
-    const member = DEMO_MEMBERS.find((m) => m.userId === userId);
-    const newPayment: Payment = {
-      id: `p-${Date.now()}`,
-      messId: 'demo-mess-1',
-      userId,
-      amount,
-      month,
-      createdAt: new Date().toISOString(),
-      user: member?.user,
-    };
-    setPayments((prev) => [newPayment, ...prev]);
-  }, []);
+      // Refresh
+      await fetchExpenses();
+      await fetchActivities();
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to add expense');
+    }
+  }, [messId, userId, fetchExpenses, fetchActivities]);
 
-  // Simple monthly stats calculation
+  // ── Add payment ────────────────────────────────────────────
+  const addPayment = useCallback(async (amount: number, targetUserId: string, month: string) => {
+    if (!messId || !userId) return;
+
+    try {
+      const { error } = await supabase
+        .from('payments')
+        .insert({
+          mess_id: messId,
+          user_id: targetUserId,
+          amount,
+          month,
+        });
+
+      if (error) {
+        Alert.alert('Error', error.message);
+        return;
+      }
+
+      // Find member name for activity
+      const member = members.find((m) => m.userId === targetUserId);
+      const memberName = member?.user.fullName || 'Member';
+
+      // Add activity
+      await supabase.from('activities').insert({
+        mess_id: messId,
+        user_id: targetUserId,
+        type: 'payment_made',
+        title: 'Payment received',
+        description: `${memberName} deposited ৳${amount.toLocaleString()}`,
+      });
+
+      // Refresh
+      await fetchPayments();
+      await fetchActivities();
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to add payment');
+    }
+  }, [messId, userId, members, fetchPayments, fetchActivities]);
+
+  // ── Monthly Stats ──────────────────────────────────────────
   const totalBazarCost = expenses
     .filter((e) => e.category === 'bazar')
     .reduce((sum, e) => sum + e.totalAmount, 0);
@@ -267,7 +550,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       (myTodayMeal.dinner === 'on' ? 1 : 0)
     : 0;
   const myDeposited = payments
-    .filter((p) => p.userId === 'demo-user-1')
+    .filter((p) => p.userId === userId)
     .reduce((sum, p) => sum + p.amount, 0);
 
   const monthlyStats: MonthlyStats = {
@@ -275,15 +558,17 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     totalMeals: totalMeals || 1,
     mealRate: Math.round(mealRate * 100) / 100,
     totalSharedCost,
-    myMeals: myMeals * 28, // Estimate for month
-    myEstimatedBill: Math.round((myMeals * 28 * mealRate) + (totalSharedCost / DEMO_MEMBERS.length)),
+    myMeals: myMeals * 28,
+    myEstimatedBill: Math.round(
+      (myMeals * 28 * mealRate) + (members.length > 0 ? totalSharedCost / members.length : 0)
+    ),
     myDeposited,
   };
 
   return (
     <DataContext.Provider
       value={{
-        members: DEMO_MEMBERS,
+        members,
         todayMeals,
         myTodayMeal,
         todayMealCount,
