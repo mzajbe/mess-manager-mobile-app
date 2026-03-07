@@ -544,8 +544,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const totalSharedCost = expenses
     .filter((e) => e.category !== 'bazar')
     .reduce((sum, e) => sum + e.totalAmount, 0);
-  const totalMeals = todayMealCount.total * 30; // Estimate
-  const mealRate = totalMeals > 0 ? totalBazarCost / totalMeals : 0;
+  const totalMeals = todayMealCount.total;
+  const mealRate = totalMeals > 0 ? totalBazarCost / Math.max(totalMeals, 1) : 0;
   const myMeals = myTodayMeal
     ? (myTodayMeal.breakfast === 'on' ? 1 : 0) +
       (myTodayMeal.lunch === 'on' ? 1 : 0) +
@@ -557,12 +557,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   const monthlyStats: MonthlyStats = {
     totalBazarCost,
-    totalMeals: totalMeals || 1,
+    totalMeals: totalMeals || 0,
     mealRate: Math.round(mealRate * 100) / 100,
     totalSharedCost,
-    myMeals: myMeals * 28,
+    myMeals,
     myEstimatedBill: Math.round(
-      (myMeals * 28 * mealRate) + (members.length > 0 ? totalSharedCost / members.length : 0)
+      (myMeals * mealRate) + (members.length > 0 ? totalSharedCost / members.length : 0)
     ),
     myDeposited,
   };

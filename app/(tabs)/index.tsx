@@ -479,46 +479,50 @@ export default function HomeScreen() {
           />
         </View>
 
-        {/* ── Quick Actions ─────────────────── */}
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>Quick Actions</Text>
-        </View>
+        {/* ── Quick Actions (Manager Only) ──── */}
+        {isManager && (
+          <>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>Quick Actions</Text>
+            </View>
 
-        <View style={styles.actionsRow}>
-          <TouchableOpacity
-            style={[styles.actionCard, { backgroundColor: theme.surface, borderColor: theme.border }]}
-            activeOpacity={0.7}
-            onPress={() => router.push('/add-bazar')}
-          >
-            <LinearGradient
-              colors={['#22C55E20', '#22C55E08']}
-              style={styles.actionGradient}
-            >
-              <View style={[styles.actionIconCircle, { backgroundColor: '#22C55E20' }]}>
-                <Ionicons name="cart" size={22} color="#22C55E" />
-              </View>
-              <Text style={[styles.actionLabel, { color: theme.text }]}>Add Cost</Text>
-              <Text style={[styles.actionSub, { color: theme.textTertiary }]}>Daily expense</Text>
-            </LinearGradient>
-          </TouchableOpacity>
+            <View style={styles.actionsRow}>
+              <TouchableOpacity
+                style={[styles.actionCard, { backgroundColor: theme.surface, borderColor: theme.border }]}
+                activeOpacity={0.7}
+                onPress={() => router.push('/add-bazar')}
+              >
+                <LinearGradient
+                  colors={['#22C55E20', '#22C55E08']}
+                  style={styles.actionGradient}
+                >
+                  <View style={[styles.actionIconCircle, { backgroundColor: '#22C55E20' }]}>
+                    <Ionicons name="cart" size={22} color="#22C55E" />
+                  </View>
+                  <Text style={[styles.actionLabel, { color: theme.text }]}>Add Cost</Text>
+                  <Text style={[styles.actionSub, { color: theme.textTertiary }]}>Daily expense</Text>
+                </LinearGradient>
+              </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.actionCard, { backgroundColor: theme.surface, borderColor: theme.border }]}
-            activeOpacity={0.7}
-            onPress={() => setShowDepositModal(true)}
-          >
-            <LinearGradient
-              colors={['#3B82F620', '#3B82F608']}
-              style={styles.actionGradient}
-            >
-              <View style={[styles.actionIconCircle, { backgroundColor: '#3B82F620' }]}>
-                <Ionicons name="wallet" size={22} color="#3B82F6" />
-              </View>
-              <Text style={[styles.actionLabel, { color: theme.text }]}>Add Deposit</Text>
-              <Text style={[styles.actionSub, { color: theme.textTertiary }]}>Member deposit</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-        </View>
+              <TouchableOpacity
+                style={[styles.actionCard, { backgroundColor: theme.surface, borderColor: theme.border }]}
+                activeOpacity={0.7}
+                onPress={() => setShowDepositModal(true)}
+              >
+                <LinearGradient
+                  colors={['#3B82F620', '#3B82F608']}
+                  style={styles.actionGradient}
+                >
+                  <View style={[styles.actionIconCircle, { backgroundColor: '#3B82F620' }]}>
+                    <Ionicons name="wallet" size={22} color="#3B82F6" />
+                  </View>
+                  <Text style={[styles.actionLabel, { color: theme.text }]}>Add Deposit</Text>
+                  <Text style={[styles.actionSub, { color: theme.textTertiary }]}>Member deposit</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </>
+        )}
 
         {/* ── Member Meals (Manager Only) ──── */}
         {isManager && (
