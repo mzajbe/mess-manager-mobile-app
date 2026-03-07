@@ -2,17 +2,17 @@ import React, { createContext, useCallback, useContext, useEffect, useState } fr
 import { Alert } from 'react-native';
 import { supabase } from '../lib/supabase';
 import {
-    Activity,
-    Expense,
-    ExpenseItem,
-    Meal,
-    MealCount,
-    MealType,
-    MessMember,
-    MonthlyBill,
-    MonthlyStats,
-    Payment,
-    User,
+  Activity,
+  Expense,
+  ExpenseItem,
+  Meal,
+  MealCount,
+  MealType,
+  MessMember,
+  MonthlyBill,
+  MonthlyStats,
+  Payment,
+  User,
 } from '../types';
 import { useAuth } from './AuthContext';
 
@@ -369,8 +369,17 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     if (error) {
       console.error('Error toggling meal:', error.message);
       await fetchMeals(); // Revert to server state
+    } else {
+      // Log activity
+      await supabase.from('activities').insert({
+        mess_id: messId,
+        user_id: userId,
+        type: 'meal_updated',
+        title: 'Meal Updated',
+        description: `${user?.fullName || 'A member'} turned ${newValue.toUpperCase()} ${mealType}`,
+      });
     }
-  }, [userId, messId, meals, fetchMeals]);
+  }, [userId, messId, meals, fetchMeals, user]);
 
   // ── Toggle member meal (manager) ───────────────────────────
   const toggleMemberMeal = useCallback(async (targetUserId: string, mealType: MealType) => {
@@ -420,8 +429,19 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     if (error) {
       console.error('Error toggling member meal:', error.message);
       await fetchMeals();
+    } else {
+      // Find the member's name for activity log
+      const targetMember = members.find((m) => m.userId === targetUserId);
+      const targetName = targetMember?.user?.fullName || 'A member';
+      await supabase.from('activities').insert({
+        mess_id: messId,
+        user_id: userId,
+        type: 'meal_updated',
+        title: 'Meal Updated',
+        description: `${user?.fullName || 'Manager'} turned ${newValue.toUpperCase()} ${mealType} for ${targetName}`,
+      });
     }
-  }, [messId, meals, fetchMeals]);
+  }, [messId, meals, fetchMeals, members, userId, user]);
 
   // ── Update guest meal count ────────────────────────────────
   const updateGuestMeal = useCallback(async (mealType: MealType, count: number) => {

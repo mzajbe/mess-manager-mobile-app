@@ -26,7 +26,6 @@ function ProgressRing({
   bgColor: string;
   size?: number;
 }) {
-  // Simple visual progress indicator
   const clampedProgress = Math.min(Math.max(progress, 0), 1);
   return (
     <View style={[styles.progressRing, { width: size, height: size }]}>
@@ -94,7 +93,7 @@ export default function DashboardScreen() {
     };
   });
 
-  // Calculate per-member summary data
+  // Calculate per-member summary data using real today's meals
   const totalBazarCost = expenses
     .filter((e) => e.category === 'bazar')
     .reduce((sum, e) => sum + e.totalAmount, 0);
@@ -104,14 +103,12 @@ export default function DashboardScreen() {
   const sharedCostPerMember = members.length > 0 ? totalSharedCost / members.length : 0;
 
   const memberSummaries = members.map((member) => {
-    // Count meals for this member from today's data (demo: estimate for the month)
     const memberMeal = todayMeals.find((m) => m.userId === member.userId);
-    const dailyMeals = memberMeal
+    const totalMeals = memberMeal
       ? (memberMeal.breakfast === 'on' ? 1 : 0) +
         (memberMeal.lunch === 'on' ? 1 : 0) +
         (memberMeal.dinner === 'on' ? 1 : 0)
       : 0;
-    const totalMeals = dailyMeals * 28; // Estimated for month
 
     const mealCost = Math.round(totalMeals * monthlyStats.mealRate);
     const estimatedBill = mealCost + Math.round(sharedCostPerMember);
@@ -133,12 +130,16 @@ export default function DashboardScreen() {
     };
   });
 
+  // Sort leaderboard by meals descending
+  const leaderboard = [...memberSummaries].sort((a, b) => b.totalMeals - a.totalMeals);
+  const maxMeals = Math.max(...leaderboard.map((m) => m.totalMeals), 1);
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         <Text style={[styles.pageTitle, { color: theme.text }]}>Dashboard</Text>
         <Text style={[styles.pageSubtitle, { color: theme.textSecondary }]}>
-          March 2026 Overview
+          {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })} Overview
         </Text>
 
         {/* Budget Overview Card */}
@@ -194,20 +195,14 @@ export default function DashboardScreen() {
         {/* Stats Grid */}
         <View style={styles.statsGrid}>
           <View style={[styles.statCardLarge, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-            <LinearGradient
-              colors={[theme.primary + '15', theme.primary + '05']}
-              style={styles.statCardGradient}
-            >
+            <LinearGradient colors={[theme.primary + '15', theme.primary + '05']} style={styles.statCardGradient}>
               <Ionicons name="people" size={28} color={theme.primary} />
               <Text style={[styles.statCardValue, { color: theme.text }]}>{members.length}</Text>
               <Text style={[styles.statCardLabel, { color: theme.textSecondary }]}>Members</Text>
             </LinearGradient>
           </View>
           <View style={[styles.statCardLarge, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-            <LinearGradient
-              colors={[theme.secondary + '15', theme.secondary + '05']}
-              style={styles.statCardGradient}
-            >
+            <LinearGradient colors={[theme.secondary + '15', theme.secondary + '05']} style={styles.statCardGradient}>
               <Ionicons name="cart" size={28} color={theme.secondary} />
               <Text style={[styles.statCardValue, { color: theme.text }]}>
                 ৳{monthlyStats.totalBazarCost.toLocaleString()}
@@ -216,20 +211,14 @@ export default function DashboardScreen() {
             </LinearGradient>
           </View>
           <View style={[styles.statCardLarge, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-            <LinearGradient
-              colors={[theme.success + '15', theme.success + '05']}
-              style={styles.statCardGradient}
-            >
+            <LinearGradient colors={[theme.success + '15', theme.success + '05']} style={styles.statCardGradient}>
               <Ionicons name="restaurant" size={28} color={theme.success} />
               <Text style={[styles.statCardValue, { color: theme.text }]}>{todayMealCount.total}</Text>
               <Text style={[styles.statCardLabel, { color: theme.textSecondary }]}>Today Meals</Text>
             </LinearGradient>
           </View>
           <View style={[styles.statCardLarge, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-            <LinearGradient
-              colors={[theme.info + '15', theme.info + '05']}
-              style={styles.statCardGradient}
-            >
+            <LinearGradient colors={[theme.info + '15', theme.info + '05']} style={styles.statCardGradient}>
               <Ionicons name="cash" size={28} color={theme.info} />
               <Text style={[styles.statCardValue, { color: theme.text }]}>
                 ৳{monthlyStats.totalSharedCost.toLocaleString()}
@@ -239,38 +228,25 @@ export default function DashboardScreen() {
           </View>
         </View>
 
-        {/* All Member Summary */}
+        {/* All Member Summary — Card layout (mobile-friendly) */}
         <View style={[styles.memberSummaryCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
           <View style={styles.memberSummaryHeader}>
             <View style={styles.memberSummaryTitleRow}>
               <Ionicons name="people-circle" size={24} color={theme.primary} />
               <Text style={[styles.cardTitle, { color: theme.text, marginBottom: 0 }]}>All Member Summary</Text>
             </View>
-            <Text style={[styles.cardSubtitle, { color: theme.textTertiary }]}>Monthly overview for all members</Text>
+            <Text style={[styles.cardSubtitle, { color: theme.textTertiary }]}>Today's overview</Text>
           </View>
 
-          {/* Table Header */}
-          <View style={[styles.summaryTableHeader, { backgroundColor: theme.primary + '10', borderColor: theme.border }]}>
-            <Text style={[styles.summaryHeaderCell, styles.summaryNameCol, { color: theme.textSecondary }]}>Member</Text>
-            <Text style={[styles.summaryHeaderCell, styles.summaryDataCol, { color: theme.textSecondary }]}>Meals</Text>
-            <Text style={[styles.summaryHeaderCell, styles.summaryDataCol, { color: theme.textSecondary }]}>Cost</Text>
-            <Text style={[styles.summaryHeaderCell, styles.summaryDataCol, { color: theme.textSecondary }]}>Deposit</Text>
-            <Text style={[styles.summaryHeaderCell, styles.summaryDataCol, { color: theme.textSecondary }]}>Balance</Text>
-          </View>
-
-          {/* Table Rows */}
           {memberSummaries.map((member, index) => (
             <View
               key={member.id}
               style={[
-                styles.summaryTableRow,
-                {
-                  backgroundColor: index % 2 === 0 ? 'transparent' : theme.primary + '05',
-                  borderColor: theme.borderLight,
-                },
+                styles.memberCard,
+                { backgroundColor: index % 2 === 0 ? 'transparent' : theme.primary + '05', borderColor: theme.borderLight },
               ]}
             >
-              <View style={[styles.summaryNameCol, styles.summaryNameContent]}>
+              <View style={styles.memberCardNameRow}>
                 <View style={[styles.summaryAvatar, { backgroundColor: theme.primary + '20' }]}>
                   <Text style={[styles.summaryAvatarText, { color: theme.primary }]}>{member.initial}</Text>
                 </View>
@@ -278,84 +254,95 @@ export default function DashboardScreen() {
                   {member.name}
                 </Text>
               </View>
-              <Text style={[styles.summaryDataCol, styles.summaryDataText, { color: theme.text }]}>
-                {member.totalMeals}
-              </Text>
-              <Text style={[styles.summaryDataCol, styles.summaryDataText, { color: theme.text }]}>
-                ৳{member.mealCost.toLocaleString()}
-              </Text>
-              <Text style={[styles.summaryDataCol, styles.summaryDataText, { color: theme.primary }]}>
-                ৳{member.deposit.toLocaleString()}
-              </Text>
-              <Text
-                style={[
-                  styles.summaryDataCol,
-                  styles.summaryBalanceText,
-                  { color: member.balance >= 0 ? theme.success : theme.danger },
-                ]}
-              >
-                {member.balance >= 0 ? '+' : ''}৳{member.balance.toLocaleString()}
-              </Text>
+              <View style={styles.memberCardStats}>
+                <View style={styles.memberCardStat}>
+                  <Text style={[styles.memberCardStatLabel, { color: theme.textTertiary }]}>Meals</Text>
+                  <Text style={[styles.memberCardStatValue, { color: theme.text }]}>{member.totalMeals}</Text>
+                </View>
+                <View style={[styles.memberCardDivider, { backgroundColor: theme.borderLight }]} />
+                <View style={styles.memberCardStat}>
+                  <Text style={[styles.memberCardStatLabel, { color: theme.textTertiary }]}>Cost</Text>
+                  <Text style={[styles.memberCardStatValue, { color: theme.text }]}>৳{member.mealCost}</Text>
+                </View>
+                <View style={[styles.memberCardDivider, { backgroundColor: theme.borderLight }]} />
+                <View style={styles.memberCardStat}>
+                  <Text style={[styles.memberCardStatLabel, { color: theme.textTertiary }]}>Deposit</Text>
+                  <Text style={[styles.memberCardStatValue, { color: theme.primary }]}>৳{member.deposit}</Text>
+                </View>
+                <View style={[styles.memberCardDivider, { backgroundColor: theme.borderLight }]} />
+                <View style={styles.memberCardStat}>
+                  <Text style={[styles.memberCardStatLabel, { color: theme.textTertiary }]}>Balance</Text>
+                  <Text style={[styles.memberCardStatValue, { color: member.balance >= 0 ? theme.success : theme.danger }]}>
+                    {member.balance >= 0 ? '+' : ''}৳{member.balance}
+                  </Text>
+                </View>
+              </View>
             </View>
           ))}
 
           {/* Total Row */}
-          <View style={[styles.summaryTotalRow, { borderColor: theme.border, backgroundColor: theme.primary + '08' }]}>
-            <Text style={[styles.summaryNameCol, styles.summaryTotalLabel, { color: theme.text }]}>Total</Text>
-            <Text style={[styles.summaryDataCol, styles.summaryTotalValue, { color: theme.text }]}>
-              {memberSummaries.reduce((sum, m) => sum + m.totalMeals, 0)}
-            </Text>
-            <Text style={[styles.summaryDataCol, styles.summaryTotalValue, { color: theme.text }]}>
-              ৳{memberSummaries.reduce((sum, m) => sum + m.mealCost, 0).toLocaleString()}
-            </Text>
-            <Text style={[styles.summaryDataCol, styles.summaryTotalValue, { color: theme.primary }]}>
-              ৳{memberSummaries.reduce((sum, m) => sum + m.deposit, 0).toLocaleString()}
-            </Text>
-            <Text
-              style={[
-                styles.summaryDataCol,
-                styles.summaryTotalValue,
-                {
-                  color: memberSummaries.reduce((sum, m) => sum + m.balance, 0) >= 0
-                    ? theme.success
-                    : theme.danger,
-                },
-              ]}
-            >
-              ৳{memberSummaries.reduce((sum, m) => sum + m.balance, 0).toLocaleString()}
-            </Text>
+          <View style={[styles.memberCardTotal, { borderColor: theme.border, backgroundColor: theme.primary + '08' }]}>
+            <Text style={[styles.summaryTotalLabel, { color: theme.text }]}>Total</Text>
+            <View style={styles.memberCardStats}>
+              <View style={styles.memberCardStat}>
+                <Text style={[styles.memberCardStatLabel, { color: theme.textTertiary }]}>Meals</Text>
+                <Text style={[styles.memberCardStatValue, { color: theme.text, fontWeight: '800' }]}>
+                  {memberSummaries.reduce((sum, m) => sum + m.totalMeals, 0)}
+                </Text>
+              </View>
+              <View style={[styles.memberCardDivider, { backgroundColor: theme.borderLight }]} />
+              <View style={styles.memberCardStat}>
+                <Text style={[styles.memberCardStatLabel, { color: theme.textTertiary }]}>Cost</Text>
+                <Text style={[styles.memberCardStatValue, { color: theme.text, fontWeight: '800' }]}>
+                  ৳{memberSummaries.reduce((sum, m) => sum + m.mealCost, 0)}
+                </Text>
+              </View>
+              <View style={[styles.memberCardDivider, { backgroundColor: theme.borderLight }]} />
+              <View style={styles.memberCardStat}>
+                <Text style={[styles.memberCardStatLabel, { color: theme.textTertiary }]}>Deposit</Text>
+                <Text style={[styles.memberCardStatValue, { color: theme.primary, fontWeight: '800' }]}>
+                  ৳{memberSummaries.reduce((sum, m) => sum + m.deposit, 0)}
+                </Text>
+              </View>
+              <View style={[styles.memberCardDivider, { backgroundColor: theme.borderLight }]} />
+              <View style={styles.memberCardStat}>
+                <Text style={[styles.memberCardStatLabel, { color: theme.textTertiary }]}>Balance</Text>
+                <Text style={[styles.memberCardStatValue, {
+                  color: memberSummaries.reduce((sum, m) => sum + m.balance, 0) >= 0 ? theme.success : theme.danger,
+                  fontWeight: '800',
+                }]}>
+                  ৳{memberSummaries.reduce((sum, m) => sum + m.balance, 0)}
+                </Text>
+              </View>
+            </View>
           </View>
         </View>
 
-        {/* Member Meal Leaderboard */}
+        {/* Member Meal Leaderboard — Real Data */}
         <View style={[styles.leaderboardCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
           <Text style={[styles.cardTitle, { color: theme.text }]}>🏆 Member Leaderboard</Text>
-          <Text style={[styles.cardSubtitle, { color: theme.textTertiary }]}>Meals eaten this month</Text>
-          {members.map((member, index) => {
-            const mealCount = 55 + Math.floor(Math.random() * 30); // Demo data
-            const maxMeals = 90;
-            return (
-              <View key={member.id} style={styles.leaderboardItem}>
-                <View style={styles.leaderboardRank}>
-                  <Text style={[styles.rankText, {
-                    color: index === 0 ? '#FFD700' : index === 1 ? '#C0C0C0' : index === 2 ? '#CD7F32' : theme.textTertiary,
-                  }]}>
-                    {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`}
-                  </Text>
-                </View>
-                <View style={[styles.leaderboardAvatar, { backgroundColor: theme.primary + ((index * 20 + 30).toString(16)) }]}>
-                  <Text style={styles.leaderboardAvatarText}>{member.user.fullName.charAt(0)}</Text>
-                </View>
-                <View style={styles.leaderboardInfo}>
-                  <Text style={[styles.leaderboardName, { color: theme.text }]}>{member.user.fullName}</Text>
-                  <View style={styles.leaderboardBarBg}>
-                    <View style={[styles.leaderboardBarFill, { width: `${(mealCount / maxMeals) * 100}%`, backgroundColor: theme.primary }]} />
-                  </View>
-                </View>
-                <Text style={[styles.leaderboardCount, { color: theme.text }]}>{mealCount}</Text>
+          <Text style={[styles.cardSubtitle, { color: theme.textTertiary }]}>Today's meals</Text>
+          {leaderboard.map((member, index) => (
+            <View key={member.id} style={styles.leaderboardItem}>
+              <View style={styles.leaderboardRank}>
+                <Text style={[styles.rankText, {
+                  color: index === 0 ? '#FFD700' : index === 1 ? '#C0C0C0' : index === 2 ? '#CD7F32' : theme.textTertiary,
+                }]}>
+                  {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`}
+                </Text>
               </View>
-            );
-          })}
+              <View style={[styles.leaderboardAvatar, { backgroundColor: theme.primary + ((index * 20 + 30).toString(16)) }]}>
+                <Text style={styles.leaderboardAvatarText}>{member.initial}</Text>
+              </View>
+              <View style={styles.leaderboardInfo}>
+                <Text style={[styles.leaderboardName, { color: theme.text }]}>{member.name}</Text>
+                <View style={styles.leaderboardBarBg}>
+                  <View style={[styles.leaderboardBarFill, { width: `${(member.totalMeals / maxMeals) * 100}%`, backgroundColor: theme.primary }]} />
+                </View>
+              </View>
+              <Text style={[styles.leaderboardCount, { color: theme.text }]}>{member.totalMeals}</Text>
+            </View>
+          ))}
         </View>
 
         <View style={{ height: Spacing['2xl'] }} />
@@ -397,6 +384,7 @@ const styles = StyleSheet.create({
   statCardGradient: { padding: Spacing.lg, alignItems: 'center', gap: 6 },
   statCardValue: { fontSize: 20, fontWeight: '800' },
   statCardLabel: { fontSize: 12, fontWeight: '500' },
+  // Leaderboard
   leaderboardCard: { borderRadius: BorderRadius.xl, borderWidth: 1, padding: Spacing.xl, ...Shadow.sm },
   leaderboardItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: Spacing.sm, gap: Spacing.sm },
   leaderboardRank: { width: 28, alignItems: 'center' },
@@ -408,22 +396,20 @@ const styles = StyleSheet.create({
   leaderboardBarBg: { height: 6, backgroundColor: 'rgba(0,0,0,0.06)', borderRadius: 3, overflow: 'hidden' },
   leaderboardBarFill: { height: '100%', borderRadius: 3 },
   leaderboardCount: { fontSize: 16, fontWeight: '800', width: 40, textAlign: 'right' },
-  // All Member Summary styles
+  // Member Summary - Card style (mobile-friendly, no overflow)
   memberSummaryCard: { borderRadius: BorderRadius.xl, borderWidth: 1, padding: Spacing.lg, marginBottom: Spacing.lg, ...Shadow.sm },
   memberSummaryHeader: { marginBottom: Spacing.md },
   memberSummaryTitleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: 2 },
-  summaryTableHeader: { flexDirection: 'row', alignItems: 'center', paddingVertical: Spacing.sm, paddingHorizontal: Spacing.xs, borderRadius: BorderRadius.sm, marginBottom: 2 },
-  summaryHeaderCell: { fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
-  summaryNameCol: { flex: 2.2 },
-  summaryDataCol: { flex: 1, textAlign: 'right' },
-  summaryTableRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: Spacing.sm, paddingHorizontal: Spacing.xs, borderBottomWidth: StyleSheet.hairlineWidth },
-  summaryNameContent: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
+  memberCard: { paddingVertical: Spacing.sm, paddingHorizontal: Spacing.xs, borderBottomWidth: StyleSheet.hairlineWidth },
+  memberCardNameRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, marginBottom: 6 },
+  memberCardStats: { flexDirection: 'row', alignItems: 'center' },
+  memberCardStat: { flex: 1, alignItems: 'center' },
+  memberCardStatLabel: { fontSize: 10, fontWeight: '500', marginBottom: 2 },
+  memberCardStatValue: { fontSize: 13, fontWeight: '700' },
+  memberCardDivider: { width: 1, height: 24 },
+  memberCardTotal: { paddingVertical: Spacing.sm, paddingHorizontal: Spacing.xs, borderTopWidth: 1.5, marginTop: 4, borderRadius: BorderRadius.sm },
   summaryAvatar: { width: 26, height: 26, borderRadius: 13, justifyContent: 'center', alignItems: 'center' },
   summaryAvatarText: { fontSize: 11, fontWeight: '700' },
-  summaryMemberName: { fontSize: 12, fontWeight: '600', flex: 1 },
-  summaryDataText: { fontSize: 12, fontWeight: '600' },
-  summaryBalanceText: { fontSize: 12, fontWeight: '700' },
-  summaryTotalRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: Spacing.sm, paddingHorizontal: Spacing.xs, borderTopWidth: 1.5, marginTop: 2, borderRadius: BorderRadius.sm },
-  summaryTotalLabel: { fontSize: 13, fontWeight: '800' },
-  summaryTotalValue: { fontSize: 12, fontWeight: '800' },
+  summaryMemberName: { fontSize: 13, fontWeight: '600', flex: 1 },
+  summaryTotalLabel: { fontSize: 13, fontWeight: '800', marginBottom: 6 },
 });

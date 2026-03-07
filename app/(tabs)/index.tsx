@@ -728,6 +728,7 @@ export default function HomeScreen() {
                   activity.type === 'bazar_added' ? theme.successLight :
                   activity.type === 'payment_made' ? theme.infoLight :
                   activity.type === 'member_joined' ? theme.primaryLight + '30' :
+                  activity.type === 'meal_updated' ? theme.secondary + '15' :
                   theme.warningLight,
               }]}>
                 <Ionicons
@@ -735,6 +736,7 @@ export default function HomeScreen() {
                     activity.type === 'bazar_added' ? 'cart' :
                     activity.type === 'payment_made' ? 'cash' :
                     activity.type === 'member_joined' ? 'person-add' :
+                    activity.type === 'meal_updated' ? 'restaurant' :
                     'megaphone'
                   }
                   size={16}
@@ -742,6 +744,7 @@ export default function HomeScreen() {
                     activity.type === 'bazar_added' ? theme.success :
                     activity.type === 'payment_made' ? theme.info :
                     activity.type === 'member_joined' ? theme.primary :
+                    activity.type === 'meal_updated' ? theme.secondary :
                     theme.warning
                   }
                 />
