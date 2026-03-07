@@ -448,17 +448,24 @@ export default function HomeScreen() {
         <View style={styles.messTotalsRow}>
           <View style={[styles.messTotalCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
             <Ionicons name="wallet" size={18} color={theme.success} />
-            <Text style={[styles.messTotalValue, { color: theme.text }]}>
+            <Text style={[styles.messTotalValue, { color: theme.text }]} numberOfLines={1}>
               ৳{payments.reduce((sum, p) => sum + p.amount, 0).toLocaleString()}
             </Text>
-            <Text style={[styles.messTotalLabel, { color: theme.textTertiary }]}>Total Deposit</Text>
+            <Text style={[styles.messTotalLabel, { color: theme.textTertiary }]}>Deposit</Text>
           </View>
           <View style={[styles.messTotalCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
             <Ionicons name="cart" size={18} color={theme.danger} />
-            <Text style={[styles.messTotalValue, { color: theme.text }]}>
+            <Text style={[styles.messTotalValue, { color: theme.text }]} numberOfLines={1}>
               ৳{expenses.reduce((sum, e) => sum + e.totalAmount, 0).toLocaleString()}
             </Text>
-            <Text style={[styles.messTotalLabel, { color: theme.textTertiary }]}>Total Cost</Text>
+            <Text style={[styles.messTotalLabel, { color: theme.textTertiary }]}>Cost</Text>
+          </View>
+          <View style={[styles.messTotalCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <Ionicons name="cash" size={18} color={theme.primary} />
+            <Text style={[styles.messTotalValue, { color: theme.text }]} numberOfLines={1}>
+              ৳{(payments.reduce((sum, p) => sum + p.amount, 0) - expenses.reduce((sum, e) => sum + e.totalAmount, 0)).toLocaleString()}
+            </Text>
+            <Text style={[styles.messTotalLabel, { color: theme.textTertiary }]}>Balance</Text>
           </View>
         </View>
 

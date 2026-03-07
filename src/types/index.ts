@@ -130,3 +130,12 @@ export interface MonthlyStats {
   myEstimatedBill: number;
   myDeposited: number;
 }
+
+export interface Message {
+  id: string;
+  messId: string;
+  userId: string;
+  text: string;
+  createdAt: string;
+  user?: User;
+}

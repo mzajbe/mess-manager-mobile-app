@@ -38,7 +38,7 @@ export default function TabLayout() {
         options={{
           title: 'Home',
           tabBarIcon: ({ color, focused }) => (
-            <View style={focused ? [styles.activeIconBg, { backgroundColor: theme.primary + '15' }] : undefined}>
+            <View style={focused ? [styles.activeIconBg, { backgroundColor: isDark ? 'rgba(20, 184, 166, 0.15)' : 'rgba(13, 148, 136, 0.15)' }] : undefined}>
               <Ionicons name={focused ? 'home' : 'home-outline'} size={22} color={color} />
             </View>
           ),
@@ -49,7 +49,7 @@ export default function TabLayout() {
         options={{
           title: 'Dashboard',
           tabBarIcon: ({ color, focused }) => (
-            <View style={focused ? [styles.activeIconBg, { backgroundColor: theme.primary + '15' }] : undefined}>
+            <View style={focused ? [styles.activeIconBg, { backgroundColor: isDark ? 'rgba(20, 184, 166, 0.15)' : 'rgba(13, 148, 136, 0.15)' }] : undefined}>
               <Ionicons name={focused ? 'stats-chart' : 'stats-chart-outline'} size={22} color={color} />
             </View>
           ),
@@ -60,7 +60,7 @@ export default function TabLayout() {
         options={{
           title: 'Bazar',
           tabBarIcon: ({ color, focused }) => (
-            <View style={focused ? [styles.activeIconBg, { backgroundColor: theme.primary + '15' }] : undefined}>
+            <View style={focused ? [styles.activeIconBg, { backgroundColor: isDark ? 'rgba(20, 184, 166, 0.15)' : 'rgba(13, 148, 136, 0.15)' }] : undefined}>
               <Ionicons name={focused ? 'cart' : 'cart-outline'} size={22} color={color} />
             </View>
           ),
@@ -71,8 +71,19 @@ export default function TabLayout() {
         options={{
           title: 'Bills',
           tabBarIcon: ({ color, focused }) => (
-            <View style={focused ? [styles.activeIconBg, { backgroundColor: theme.primary + '15' }] : undefined}>
+            <View style={focused ? [styles.activeIconBg, { backgroundColor: isDark ? 'rgba(20, 184, 166, 0.15)' : 'rgba(13, 148, 136, 0.15)' }] : undefined}>
               <Ionicons name={focused ? 'receipt' : 'receipt-outline'} size={22} color={color} />
+            </View>
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="chat"
+        options={{
+          title: 'Chat',
+          tabBarIcon: ({ color, focused }) => (
+            <View style={focused ? [styles.activeIconBg, { backgroundColor: isDark ? 'rgba(20, 184, 166, 0.15)' : 'rgba(13, 148, 136, 0.15)' }] : undefined}>
+              <Ionicons name={focused ? 'chatbubbles' : 'chatbubbles-outline'} size={22} color={color} />
             </View>
           ),
         }}
@@ -82,7 +93,7 @@ export default function TabLayout() {
         options={{
           title: 'More',
           tabBarIcon: ({ color, focused }) => (
-            <View style={focused ? [styles.activeIconBg, { backgroundColor: theme.primary + '15' }] : undefined}>
+            <View style={focused ? [styles.activeIconBg, { backgroundColor: isDark ? 'rgba(20, 184, 166, 0.15)' : 'rgba(13, 148, 136, 0.15)' }] : undefined}>
               <Ionicons name={focused ? 'menu' : 'menu-outline'} size={22} color={color} />
             </View>
           ),
@@ -94,7 +105,7 @@ export default function TabLayout() {
 
 const styles = StyleSheet.create({
   activeIconBg: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: BorderRadius.full,
     alignItems: 'center' as const,
