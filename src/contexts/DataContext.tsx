@@ -267,6 +267,44 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     ]).finally(() => setIsLoading(false));
   }, [messId, fetchMembers, fetchMeals, fetchExpenses, fetchPayments, fetchActivities]);
 
+  // ── Realtime subscriptions ────────────────────────────────
+  useEffect(() => {
+    if (!messId) return;
+
+    const channel = supabase
+      .channel(`mess-${messId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'meals', filter: `mess_id=eq.${messId}` },
+        () => { fetchMeals(); }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'payments', filter: `mess_id=eq.${messId}` },
+        () => { fetchPayments(); }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'expenses', filter: `mess_id=eq.${messId}` },
+        () => { fetchExpenses(); }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'activities', filter: `mess_id=eq.${messId}` },
+        () => { fetchActivities(); }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'mess_members', filter: `mess_id=eq.${messId}` },
+        () => { fetchMembers(); }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [messId, fetchMeals, fetchPayments, fetchExpenses, fetchActivities, fetchMembers]);
+
   // ── Derived data ───────────────────────────────────────────
   const todayMeals = meals.filter((m) => m.date === today);
   const myTodayMeal = todayMeals.find((m) => m.userId === userId) || null;
