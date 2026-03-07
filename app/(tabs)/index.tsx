@@ -444,6 +444,24 @@ export default function HomeScreen() {
           </View>
         </LinearGradient>
 
+        {/* ── Mess Totals ─────────────────────── */}
+        <View style={styles.messTotalsRow}>
+          <View style={[styles.messTotalCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <Ionicons name="wallet" size={18} color={theme.success} />
+            <Text style={[styles.messTotalValue, { color: theme.text }]}>
+              ৳{payments.reduce((sum, p) => sum + p.amount, 0).toLocaleString()}
+            </Text>
+            <Text style={[styles.messTotalLabel, { color: theme.textTertiary }]}>Total Deposit</Text>
+          </View>
+          <View style={[styles.messTotalCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <Ionicons name="cart" size={18} color={theme.danger} />
+            <Text style={[styles.messTotalValue, { color: theme.text }]}>
+              ৳{expenses.reduce((sum, e) => sum + e.totalAmount, 0).toLocaleString()}
+            </Text>
+            <Text style={[styles.messTotalLabel, { color: theme.textTertiary }]}>Total Cost</Text>
+          </View>
+        </View>
+
         {/* ── My Meals Toggle ───────────────── */}
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>My Meals Today</Text>
@@ -753,6 +771,8 @@ export default function HomeScreen() {
                 <Text style={[styles.activityTitle, { color: theme.text }]}>{activity.description}</Text>
                 <Text style={[styles.activityTime, { color: theme.textTertiary }]}>
                   {new Date(activity.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  {', '}
+                  {new Date(activity.createdAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
                   {' · '}
                   {activity.user?.fullName}
                 </Text>
@@ -880,6 +900,12 @@ const styles = StyleSheet.create({
   myStatValue: { color: '#fff', fontSize: 16, fontWeight: '800' },
   myStatLabel: { color: 'rgba(255,255,255,0.75)', fontSize: 10, fontWeight: '500', marginTop: 3 },
   myStatDivider: { width: 1, backgroundColor: 'rgba(255,255,255,0.2)', marginVertical: 4 },
+
+  // Mess Totals
+  messTotalsRow: { flexDirection: 'row', gap: Spacing.md, marginBottom: Spacing.lg },
+  messTotalCard: { flex: 1, alignItems: 'center', gap: 4, borderRadius: BorderRadius.lg, borderWidth: 1, paddingVertical: Spacing.md, paddingHorizontal: Spacing.sm, ...Shadow.sm },
+  messTotalValue: { fontSize: 16, fontWeight: '800' },
+  messTotalLabel: { fontSize: 10, fontWeight: '500' },
 
   // Section
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.md, marginTop: Spacing.sm },

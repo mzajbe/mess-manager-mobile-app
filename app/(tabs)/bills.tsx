@@ -17,18 +17,23 @@ import { PaymentStatus } from '../../src/types';
 
 export default function BillsScreen() {
   const { theme } = useTheme();
-  const { members, payments, monthlyStats, expenses } = useData();
+  const { members, payments, monthlyStats, expenses, todayMeals } = useData();
   const { isManager } = useAuth();
   const [expandedMember, setExpandedMember] = useState<string | null>(null);
 
   const totalBazarCost = expenses.filter((e) => e.category === 'bazar').reduce((sum, e) => sum + e.totalAmount, 0);
   const totalSharedCost = expenses.filter((e) => e.category !== 'bazar').reduce((sum, e) => sum + e.totalAmount, 0);
-  const perPersonShared = totalSharedCost / members.length;
+  const perPersonShared = members.length > 0 ? totalSharedCost / members.length : 0;
   const mealRate = monthlyStats.mealRate;
 
-  // Calculate bill for each member
+  // Calculate bill for each member using real meal data
   const memberBills = members.map((member) => {
-    const memberMeals = 45 + Math.floor(Math.random() * 30); // Demo
+    const memberMeal = todayMeals.find((m) => m.userId === member.userId);
+    const memberMeals = memberMeal
+      ? (memberMeal.breakfast === 'on' ? 1 : 0) +
+        (memberMeal.lunch === 'on' ? 1 : 0) +
+        (memberMeal.dinner === 'on' ? 1 : 0)
+      : 0;
     const mealCost = Math.round(memberMeals * mealRate);
     const totalBill = Math.round(mealCost + perPersonShared);
     const deposited = payments
@@ -66,7 +71,7 @@ export default function BillsScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         <Text style={[styles.pageTitle, { color: theme.text }]}>Monthly Bills</Text>
         <Text style={[styles.pageSubtitle, { color: theme.textSecondary }]}>
-          March 2026
+          {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
         </Text>
 
         {/* Summary Card */}
