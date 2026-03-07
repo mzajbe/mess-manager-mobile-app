@@ -1,21 +1,24 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React from 'react';
+import React, { useState } from 'react';
 import {
     ActionSheetIOS,
     Alert,
+    Modal,
     Platform,
     ScrollView,
     Share,
     StyleSheet,
     Text,
+    TextInput,
     TouchableOpacity,
-    View,
+    View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../src/contexts/AuthContext';
 import { useData } from '../src/contexts/DataContext';
 import { useTheme } from '../src/contexts/ThemeContext';
+import { supabase } from '../src/lib/supabase';
 import { BorderRadius, Shadow, Spacing } from '../src/theme';
 
 export default function MembersScreen() {
@@ -23,6 +26,10 @@ export default function MembersScreen() {
   const { isManager, mess, user, transferManager, removeMember } = useAuth();
   const { members, refreshMembers } = useData();
   const router = useRouter();
+
+  // Rename modal state
+  const [renameModal, setRenameModal] = useState<{ visible: boolean; userId: string; name: string }>({ visible: false, userId: '', name: '' });
+  const [newName, setNewName] = useState('');
 
   const handleShareInvite = async () => {
     if (mess?.inviteCode) {
@@ -33,9 +40,9 @@ export default function MembersScreen() {
   };
 
   const showMemberActions = (memberId: string, memberUserId: string, memberName: string) => {
-    const options = ['Make Manager', 'Remove Member', 'Cancel'];
-    const destructiveIndex = 1;
-    const cancelIndex = 2;
+    const options = ['Rename', 'Make Manager', 'Remove Member', 'Cancel'];
+    const destructiveIndex = 2;
+    const cancelIndex = 3;
 
     if (Platform.OS === 'ios') {
       ActionSheetIOS.showActionSheetWithOptions(
@@ -47,8 +54,9 @@ export default function MembersScreen() {
           message: 'Choose an action',
         },
         (buttonIndex) => {
-          if (buttonIndex === 0) handleMakeManager(memberUserId, memberName);
-          if (buttonIndex === 1) handleRemoveMember(memberUserId, memberName);
+          if (buttonIndex === 0) handleRenameMember(memberUserId, memberName);
+          if (buttonIndex === 1) handleMakeManager(memberUserId, memberName);
+          if (buttonIndex === 2) handleRemoveMember(memberUserId, memberName);
         },
       );
     } else {
@@ -57,6 +65,10 @@ export default function MembersScreen() {
         memberName,
         'Choose an action',
         [
+          {
+            text: '✏️ Rename',
+            onPress: () => handleRenameMember(memberUserId, memberName),
+          },
           {
             text: '👑 Make Manager',
             onPress: () => handleMakeManager(memberUserId, memberName),
@@ -70,6 +82,27 @@ export default function MembersScreen() {
         ],
       );
     }
+  };
+
+  const handleRenameMember = (memberUserId: string, currentName: string) => {
+    setNewName(currentName);
+    setRenameModal({ visible: true, userId: memberUserId, name: currentName });
+  };
+
+  const submitRename = async () => {
+    if (!newName.trim()) return;
+    const { error } = await supabase
+      .from('users')
+      .update({ full_name: newName.trim() })
+      .eq('id', renameModal.userId);
+
+    if (error) {
+      Alert.alert('Error', error.message);
+      return;
+    }
+    setRenameModal({ visible: false, userId: '', name: '' });
+    await refreshMembers();
+    Alert.alert('Done', `Name updated to "${newName.trim()}"`);
   };
 
   const handleMakeManager = (memberUserId: string, memberName: string) => {
@@ -183,6 +216,55 @@ export default function MembersScreen() {
 
         <View style={{ height: Spacing['2xl'] }} />
       </ScrollView>
+
+      {/* Rename Modal */}
+      <Modal visible={renameModal.visible} animationType="slide" transparent>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
+          <View style={{ backgroundColor: theme.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: Spacing.xl, paddingBottom: Spacing['4xl'] }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.xl }}>
+              <Text style={{ fontSize: 20, fontWeight: '700', color: theme.text }}>Rename Member</Text>
+              <TouchableOpacity onPress={() => setRenameModal({ visible: false, userId: '', name: '' })}>
+                <Ionicons name="close" size={24} color={theme.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={{ fontSize: 11, fontWeight: '700', letterSpacing: 1.5, marginBottom: Spacing.sm, color: theme.textSecondary }}>NEW NAME</Text>
+            <TextInput
+              style={{
+                borderWidth: 1,
+                borderRadius: BorderRadius.md,
+                padding: Spacing.md,
+                fontSize: 16,
+                fontWeight: '600',
+                marginBottom: Spacing.xl,
+                backgroundColor: theme.background,
+                borderColor: theme.border,
+                color: theme.text,
+              }}
+              value={newName}
+              onChangeText={setNewName}
+              autoFocus
+              selectTextOnFocus
+            />
+
+            <TouchableOpacity
+              onPress={submitRename}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                paddingVertical: 14,
+                borderRadius: BorderRadius.lg,
+                backgroundColor: theme.primary,
+              }}
+            >
+              <Ionicons name="checkmark-circle" size={20} color="#fff" />
+              <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>Save Name</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
