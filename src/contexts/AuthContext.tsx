@@ -1,7 +1,7 @@
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
-import { Alert } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import { supabase } from '../lib/supabase';
 import { Mess, MessMember, User } from '../types';
 
@@ -243,19 +243,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         provider: 'google',
         options: {
           redirectTo,
-          skipBrowserRedirect: true,
+          skipBrowserRedirect: Platform.OS !== 'web',
           queryParams: {
             prompt: 'select_account',
           },
         },
       });
 
+      // On Web, Supabase automatically handles the redirection and URL parsing natively.
+      if (Platform.OS === 'web') {
+        if (error) Alert.alert('Error', error.message);
+        return;
+      }
+
       if (error || !data.url) {
         Alert.alert('Error', error?.message || 'Failed to start Google sign in');
         return;
       }
 
-      // Open browser for Google OAuth
+      // Open browser for Google OAuth (Mobile Only)
       const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
 
       if (result.type === 'success' && result.url) {

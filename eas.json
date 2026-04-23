@@ -1,0 +1,26 @@
+{
+    "cli": {
+        "version": ">= 12.0.0"
+    },
+    "build": {
+        "development": {
+            "developmentClient": true,
+            "distribution": "internal"
+        },
+        "preview": {
+            "distribution": "internal",
+            "android": {
+                "buildType": "apk"
+            },
+            "env": {
+                "EXPO_PUBLIC_SUPABASE_URL": "https://goncytlntfwkewpckrfp.supabase.co",
+                "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdvbmN5dGxudGZ3a2V3cGNrcmZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY5NzA4NDgsImV4cCI6MjA5MjU0Njg0OH0.2reASB3CKvYbAKK3dU52rftOEBs0nTD40owQqxImT3o",
+                "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "633000334314-erbdgfhl6epb2908afhfcq412cd4jp15.apps.googleusercontent.com"
+            }
+        },
+        "production": {}
+    },
+    "submit": {
+        "production": {}
+    }
+}

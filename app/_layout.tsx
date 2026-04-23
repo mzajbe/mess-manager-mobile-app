@@ -1,4 +1,4 @@
-import { Redirect, Stack } from 'expo-router';
+import { Redirect, Stack, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, View } from 'react-native';
 import { AuthProvider, useAuth } from '../src/contexts/AuthContext';
@@ -8,6 +8,7 @@ import { ThemeProvider, useTheme } from '../src/contexts/ThemeContext';
 function RootLayoutContent() {
   const { theme, isDark } = useTheme();
   const { isLoggedIn, isLoading } = useAuth();
+  const segments = useSegments();
 
   // Show loading spinner while checking auth state
   if (isLoading) {
@@ -33,7 +34,9 @@ function RootLayoutContent() {
           <Stack.Screen name="login" />
           <Stack.Screen name="auth" />
         </Stack>
-        <Redirect href="/login" />
+        {segments[0] !== 'login' && segments[0] !== 'auth' && (
+          <Redirect href="/login" />
+        )}
       </>
     );
   }

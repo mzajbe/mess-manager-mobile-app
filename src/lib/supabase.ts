@@ -105,6 +105,6 @@ export const supabase = createClient(supabaseUrl || '', supabaseAnonKey || '', {
     storage: LargeSecureStoreAdapter,
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: false,
+    detectSessionInUrl: Platform.OS === 'web',
   },
 });

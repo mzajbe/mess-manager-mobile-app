@@ -1,7 +1,7 @@
 import * as Linking from 'expo-linking';
 import { router } from 'expo-router';
 import React, { useEffect } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { supabase } from '../../src/lib/supabase';
 
@@ -12,7 +12,13 @@ export default function AuthCallbackScreen() {
     const handleCallback = async () => {
       try {
         // Get the URL that opened this screen
-        const url = await Linking.getInitialURL();
+        let url = '';
+        if (Platform.OS === 'web') {
+          url = window.location.href;
+        } else {
+          const initialUrl = await Linking.getInitialURL();
+          url = initialUrl || '';
+        }
         
         if (url) {
           const parsedUrl = new URL(url);
