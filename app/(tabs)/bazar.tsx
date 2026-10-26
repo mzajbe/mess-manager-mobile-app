@@ -62,7 +62,7 @@ function ExpenseCard({ expense, theme }: { expense: Expense; theme: any }) {
 
 export default function BazarScreen() {
   const { theme } = useTheme();
-  const { expenses, monthlyStats } = useData();
+  const { expenses } = useData();
   const router = useRouter();
 
   const totalThisMonth = expenses.reduce((sum, e) => sum + e.totalAmount, 0);

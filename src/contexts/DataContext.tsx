@@ -17,7 +17,6 @@ import {
 import { useAuth } from './AuthContext';
 
 const today = new Date().toISOString().split('T')[0];
-const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
 
 interface DataContextType {
   // Members

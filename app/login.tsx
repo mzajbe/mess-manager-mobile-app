@@ -1,5 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import React, { useState } from 'react';
 import {
@@ -21,13 +20,8 @@ import { BorderRadius, Spacing } from '../src/theme';
 
 WebBrowser.maybeCompleteAuthSession();
 
-const redirectUri = AuthSession.makeRedirectUri({
-  scheme: 'messmanager',
-  path: 'auth/callback',
-});
-
 export default function LoginScreen() {
-  const { theme, isDark } = useTheme();
+  const { theme } = useTheme();
   const { signIn, signUp, signInWithGoogle } = useAuth();
 
   const [isSignUp, setIsSignUp] = useState(false);

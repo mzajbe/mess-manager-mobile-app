@@ -1,4 +1,38 @@
-export const Colors = {
+export interface ThemeGradient {
+  primary: readonly [string, string, ...string[]];
+  secondary: readonly [string, string, ...string[]];
+  hero: readonly [string, string, ...string[]];
+}
+
+export interface ThemeColors {
+  primary: string;
+  primaryLight: string;
+  primaryDark: string;
+  secondary: string;
+  secondaryLight: string;
+  secondaryDark: string;
+  background: string;
+  surface: string;
+  surfaceElevated: string;
+  text: string;
+  textSecondary: string;
+  textTertiary: string;
+  border: string;
+  borderLight: string;
+  success: string;
+  successLight: string;
+  danger: string;
+  dangerLight: string;
+  warning: string;
+  warningLight: string;
+  info: string;
+  infoLight: string;
+  overlay: string;
+  shadow: string;
+  gradient: ThemeGradient;
+}
+
+export const Colors: { light: ThemeColors; dark: ThemeColors } = {
   light: {
     primary: '#0D9488',
     primaryLight: '#5EEAD4',
@@ -62,5 +96,3 @@ export const Colors = {
     },
   },
 };
-
-export type ThemeColors = typeof Colors.light;

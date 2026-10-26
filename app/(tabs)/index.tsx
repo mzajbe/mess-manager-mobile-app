@@ -255,7 +255,7 @@ export default function HomeScreen() {
 
           {/* Welcome Card */}
           <LinearGradient
-            colors={theme.gradient.hero as unknown as string[]}
+            colors={theme.gradient.hero}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={[styles.messCard, { alignItems: 'center', paddingVertical: Spacing['3xl'] }]}
@@ -408,7 +408,7 @@ export default function HomeScreen() {
 
         {/* ── Mess Card with My Stats ────────── */}
         <LinearGradient
-          colors={theme.gradient.hero as unknown as string[]}
+          colors={theme.gradient.hero}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.messCard}

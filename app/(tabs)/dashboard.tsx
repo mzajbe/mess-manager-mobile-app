@@ -94,9 +94,6 @@ export default function DashboardScreen() {
   });
 
   // Calculate per-member summary data using real today's meals
-  const totalBazarCost = expenses
-    .filter((e) => e.category === 'bazar')
-    .reduce((sum, e) => sum + e.totalAmount, 0);
   const totalSharedCost = expenses
     .filter((e) => e.category !== 'bazar')
     .reduce((sum, e) => sum + e.totalAmount, 0);
@@ -235,7 +232,7 @@ export default function DashboardScreen() {
               <Ionicons name="people-circle" size={24} color={theme.primary} />
               <Text style={[styles.cardTitle, { color: theme.text, marginBottom: 0 }]}>All Member Summary</Text>
             </View>
-            <Text style={[styles.cardSubtitle, { color: theme.textTertiary }]}>Today's overview</Text>
+            <Text style={[styles.cardSubtitle, { color: theme.textTertiary }]}>Today&apos;s overview</Text>
           </View>
 
           {memberSummaries.map((member, index) => (
@@ -321,7 +318,7 @@ export default function DashboardScreen() {
         {/* Member Meal Leaderboard — Real Data */}
         <View style={[styles.leaderboardCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
           <Text style={[styles.cardTitle, { color: theme.text }]}>🏆 Member Leaderboard</Text>
-          <Text style={[styles.cardSubtitle, { color: theme.textTertiary }]}>Today's meals</Text>
+          <Text style={[styles.cardSubtitle, { color: theme.textTertiary }]}>Today&apos;s meals</Text>
           {leaderboard.map((member, index) => (
             <View key={member.id} style={styles.leaderboardItem}>
               <View style={styles.leaderboardRank}>

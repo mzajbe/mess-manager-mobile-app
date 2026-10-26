@@ -26,6 +26,19 @@ interface AuthContextType {
   removeMember: (targetUserId: string, memberName: string) => Promise<void>;
 }
 
+function formatAuthError(error: any): string {
+  const message = error?.message || (typeof error === 'string' ? error : '');
+  if (
+    message.includes('Network request failed') ||
+    message.includes('Failed to fetch') ||
+    message.includes('fetch failed') ||
+    message.includes('ENOTFOUND')
+  ) {
+    return 'Could not connect to the Supabase backend server. Your Supabase project may be paused or unreachable. Please verify EXPO_PUBLIC_SUPABASE_URL in your .env file.';
+  }
+  return message || 'An unexpected error occurred. Please try again.';
+}
+
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -145,24 +158,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Listen to auth state changes
   useEffect(() => {
     // Check initial session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      console.log('Initial session check:', session ? 'Session found' : 'No session');
-      if (session?.user) {
-        const meta = session.user.user_metadata;
-        const profile = await fetchUserProfile(
-          session.user.id,
-          session.user.email,
-          meta?.full_name || meta?.name,
-          meta?.avatar_url
-        );
-        console.log('Profile loaded:', profile ? profile.fullName : 'null');
-        setUser(profile);
-        if (profile) {
-          await fetchMessData(profile.id);
+    supabase.auth
+      .getSession()
+      .then(async ({ data: { session } }) => {
+        console.log('Initial session check:', session ? 'Session found' : 'No session');
+        if (session?.user) {
+          const meta = session.user.user_metadata;
+          const profile = await fetchUserProfile(
+            session.user.id,
+            session.user.email,
+            meta?.full_name || meta?.name,
+            meta?.avatar_url
+          );
+          console.log('Profile loaded:', profile ? profile.fullName : 'null');
+          setUser(profile);
+          if (profile) {
+            await fetchMessData(profile.id);
+          }
         }
-      }
-      setIsLoading(false);
-    });
+        setIsLoading(false);
+      })
+      .catch((err) => {
+        console.warn('Initial session check failed:', err?.message);
+        setIsLoading(false);
+      });
 
     // Subscribe to auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -199,10 +218,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
-        Alert.alert('Sign In Failed', error.message);
+        Alert.alert('Sign In Failed', formatAuthError(error));
       }
     } catch (err: any) {
-      Alert.alert('Error', err.message || 'An unexpected error occurred');
+      Alert.alert('Sign In Failed', formatAuthError(err));
     } finally {
       setIsLoading(false);
     }
@@ -219,12 +238,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         },
       });
       if (error) {
-        Alert.alert('Sign Up Failed', error.message);
+        Alert.alert('Sign Up Failed', formatAuthError(error));
         return;
       }
       Alert.alert('Success', 'Account created! Please check your email to verify your account.');
     } catch (err: any) {
-      Alert.alert('Error', err.message || 'An unexpected error occurred');
+      Alert.alert('Sign Up Failed', formatAuthError(err));
     } finally {
       setIsLoading(false);
     }
